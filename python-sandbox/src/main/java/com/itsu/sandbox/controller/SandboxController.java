@@ -144,7 +144,7 @@ public class SandboxController {
             @RequestParam String path,
             @RequestParam("file") MultipartFile file) throws IOException {
         
-        sandboxService.uploadFile(sessionId, path, file.getBytes());
+        sandboxService.uploadFile(sessionId, path, file.getBytes(), file.getOriginalFilename());
         
         Map<String, String> response = new HashMap<>();
         response.put("message", "File uploaded successfully: " + path);

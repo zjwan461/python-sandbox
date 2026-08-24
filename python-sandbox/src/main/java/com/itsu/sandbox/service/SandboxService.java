@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -143,19 +144,31 @@ public class SandboxService {
         return baos.toByteArray();
     }
 
-    public void uploadFile(String sessionId, String containerPath, byte[] content) {
+    public void uploadFile(String sessionId, String containerPath, byte[] content, String originalFileName) {
         SandboxSession session = getSession(sessionId);
-        // 从 containerPath 中提取原始文件名和后缀，构造 /tmp/<原始文件名>_<时间戳>.<后缀>
-        String originalName = containerPath.contains("/")
-                ? containerPath.substring(containerPath.lastIndexOf('/') + 1)
-                : containerPath;
-        String extension = originalName.contains(".")
-                ? originalName.substring(originalName.lastIndexOf('.'))
-                : "";
-        String nameWithoutExt = originalName.contains(".")
-                ? originalName.substring(0, originalName.lastIndexOf('.'))
-                : originalName;
-        String tmpHostFile = "/tmp/" + nameWithoutExt + "_" + System.currentTimeMillis() + extension;
+        String tmpHostFile = null;
+        if (StringUtils.hasText(originalFileName)) {
+            // 使用原始文件名和时间戳构造临时文件路径
+            String extension = originalFileName.contains(".")
+                    ? originalFileName.substring(originalFileName.lastIndexOf('.'))
+                    : "";
+            String nameWithoutExt = originalFileName.contains(".")
+                    ? originalFileName.substring(0, originalFileName.lastIndexOf('.'))
+                    : originalFileName;
+            tmpHostFile = "/tmp/" + nameWithoutExt + "_" + System.currentTimeMillis() + extension;
+        } else {
+            // 从 containerPath 中提取原始文件名和后缀，构造 /tmp/<原始文件名>_<时间戳>.<后缀>
+            String originalName = containerPath.contains("/")
+                    ? containerPath.substring(containerPath.lastIndexOf('/') + 1)
+                    : containerPath;
+            String extension = originalName.contains(".")
+                    ? originalName.substring(originalName.lastIndexOf('.'))
+                    : "";
+            String nameWithoutExt = originalName.contains(".")
+                    ? originalName.substring(0, originalName.lastIndexOf('.'))
+                    : originalName;
+            tmpHostFile = "/tmp/" + nameWithoutExt + "_" + System.currentTimeMillis() + extension;
+        }
         try (FileOutputStream fos = new FileOutputStream(tmpHostFile)) {
             fos.write(content);
         } catch (IOException e) {
