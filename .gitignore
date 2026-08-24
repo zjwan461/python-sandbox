@@ -122,3 +122,4 @@ sdk/java-sandbox-sdk/target/
 *.tmp
 *.bak
 *~
+.pypirc
