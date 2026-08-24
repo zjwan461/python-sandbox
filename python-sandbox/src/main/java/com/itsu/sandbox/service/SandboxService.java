@@ -180,6 +180,29 @@ public class SandboxService {
     @PreDestroy
     public void stopAndRemoveAllContainers() {
         log.info("Cleaning up all sandbox containers...");
+        
+        // 首先停止所有 python-sandbox_* 前缀的 Docker 容器
+        try {
+            Process ps = runCommand("docker", "ps", "-q", "--filter", "name=python-sandbox-");
+            String containerIds = readStdout(ps).trim();
+            if (!containerIds.isEmpty()) {
+                for (String containerId : containerIds.split("\n")) {
+                    containerId = containerId.trim();
+                    if (!containerId.isEmpty()) {
+                        log.info("Stopping container: {}", containerId);
+                        try {
+                            runCommand("docker", "stop", containerId).waitFor();
+                        } catch (Exception e) {
+                            log.warn("Failed to stop container {}: {}", containerId, e.getMessage());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to stop docker containers: {}", e.getMessage());
+        }
+        
+        // 同时清理本服务进程创建的会话
         sessions.keySet().forEach(this::removeContainer);
         sessions.clear();
     }
