@@ -1,0 +1,21 @@
+spring:
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+server:
+  port: 8080
+
+sandbox:
+  api-key: ${SANDBOX_API_KEY:sandbox-secret-key}
+  image: python:3.12-trixie
+  container-name-prefix: python-sandbox-
+  session-timeout-millis: 86400000       # 会话超时时间，默认 24 小时
+  session-cleanup-interval-millis: 3600000  # 清理检查间隔，默认 1 小时
+  max-containers: 10                     # 最大活跃容器数量，默认 10 个
+  max-containers-behavior: reject        # reject / evict-oldest
+
+logging:
+  level:
+    com.itsu.sandbox: INFO
