@@ -10,6 +10,9 @@
 - **文件操作**：上传、下载、写入沙箱中的文件
 - **API Key认证**：所有接口（除健康检查外）都需要 X-Api-Key 请求头
 - **自动清理**：容器重启后自动清空所有数据和依赖包
+- **会话超时**：可配置的空闲会话自动回收机制
+- **容量限制**：可配置最大活跃容器数及超出策略（拒绝 / 驱逐最旧）
+- **启动预热**：可选择在服务启动时预拉取 Python 镜像，避免首次会话延迟
 
 ## 技术栈
 
@@ -22,11 +25,14 @@
 
 ### 1. 环境变量配置
 
-创建 `.env` 文件：
+复制示例文件并按需修改：
 
 ```bash
-SANDBOX_API_KEY=your-secret-api-key-here
+cp .env.example .env
+# 编辑 .env，至少修改 SANDBOX_API_KEY
 ```
+
+> `.env.example` 中已包含 `docker-compose.yml` 所有可调参数，开箱即用。
 
 ### 2. 构建并启动
 
@@ -35,7 +41,6 @@ SANDBOX_API_KEY=your-secret-api-key-here
 docker-compose up -d --build
 
 # 或直接使用 Maven 本地运行
-cd src/main
 mvn spring-boot:run
 ```
 
@@ -44,6 +49,50 @@ mvn spring-boot:run
 ```bash
 curl http://localhost:8080/health
 ```
+
+## 配置项说明
+
+所有配置均可在 `.env`（推荐）或 `application.yml` 中调整，最终生效值以环境变量为准。
+
+| 环境变量 | application.yml 对应 | 默认值 | 说明 |
+|---|---|---|---|
+| `SANDBOX_API_KEY` | `sandbox.api-key` | `sandbox-secret-key` | API 鉴权密钥 |
+| `SANDBOX_IMAGE` | `sandbox.image` | `python:3.12-trixie` | 沙箱使用的 Python 镜像 |
+| `SANDBOX_CONTAINER_NAME_PREFIX` | `sandbox.container-name-prefix` | `python-sandbox-` | 沙箱容器名称前缀 |
+| `SANDBOX_SESSION_TIMEOUT_MILLIS` | `sandbox.session-timeout-millis` | `86400000` | 会话超时时间（毫秒），默认 24 小时 |
+| `SANDBOX_SESSION_CLEANUP_INTERVAL_MILLIS` | `sandbox.session-cleanup-interval-millis` | `3600000` | 过期会话扫描间隔，默认 1 小时 |
+| `SANDBOX_MAX_CONTAINERS` | `sandbox.max-containers` | `10` | 最大活跃沙箱容器数 |
+| `SANDBOX_MAX_CONTAINERS_BEHAVIOR` | `sandbox.max-containers-behavior` | `reject` | 超限策略：`reject` / `evict-oldest` |
+| `SANDBOX_PULL_IMAGE_ON_STARTUP` | `sandbox.pull-image-on-startup` | `false` | 是否在服务启动时预拉取镜像 |
+| `DOCKER_HOST` | — | `unix:///var/run/docker.sock` | Docker 守护进程连接地址 |
+
+### 启动预拉取镜像（`SANDBOX_PULL_IMAGE_ON_STARTUP`）
+
+服务启动时（`SandboxService` 的 `@PostConstruct` 钩子）会按需预拉取 Python 镜像：
+
+- **`false`（默认）**：不预拉取，首次创建会话时才触发拉取（冷启动稍慢）
+- **`true`**：启动 Bean 时同步执行 `docker pull`，确保首个会话请求零延迟
+
+> 拉取失败仅记录日志，不会阻断应用启动。
+
+### Docker 连接方式（`DOCKER_HOST`）
+
+默认通过 unix socket 挂载宿主机 Docker：
+
+```env
+DOCKER_HOST=unix:///var/run/docker.sock
+```
+
+如需连接远程 Docker（如 Docker-in-Docker、独立 Docker 主机）：
+
+```env
+# 普通远程
+DOCKER_HOST=tcp://docker-host:2375
+# TLS 加密
+DOCKER_HOST=tcp://docker-host:2376
+```
+
+⚠️ 切换为远程 Docker 时，请同时在 `docker-compose.yml` 中注释/删除 `/var/run/docker.sock` 的挂载行，并确保远程 Docker 守护进程已开启远程 API 监听。
 
 ## API 文档
 
@@ -207,11 +256,11 @@ python-sandbox/
 ├── pom.xml
 ├── Dockerfile
 ├── docker-compose.yml
-├── .env.example
+├── .env.example                # 环境变量模板（cp .env.example .env 后修改）
 └── src/
     └── main/
         ├── java/
-        │   └── com/example/sandbox/
+        │   └── com/itsu/sandbox/
         │       ├── PythonSandboxApplication.java
         │       ├── config/
         │       │   ├── SandboxConfig.java
@@ -226,9 +275,9 @@ python-sandbox/
         │       │   ├── SandboxException.java
         │       │   └── GlobalExceptionHandler.java
         │       └── service/
-        │           └── SandboxService.java
+        │           └── SandboxService.java    # @PostConstruct 启动钩子在此
         └── resources/
-            └── application.properties
+            └── application.yml
 ```
 
 ## Shell 命令黑名单
@@ -264,10 +313,16 @@ python-sandbox/
 A: 是的，每次重启容器都会清空所有 Python 包和上传的文件。这是设计如此。
 
 ### Q: 如何修改默认端口？
-A: 在 `application.properties` 中修改 `server.port` 配置项。
+A: 在 `application.yml` 中修改 `server.port` 配置项。
 
 ### Q: 如何自定义 API Key？
-A: 通过环境变量 `SANDBOX_API_KEY` 或 `application.properties` 中的 `sandbox.api-key` 配置。
+A: 通过环境变量 `SANDBOX_API_KEY` 或 `application.yml` 中的 `sandbox.api-key` 配置。
+
+### Q: 如何启用启动时预拉取镜像？
+A: 在 `.env` 中设置 `SANDBOX_PULL_IMAGE_ON_STARTUP=true`，重启服务即可。
+
+### Q: 如何连接远程 Docker？
+A: 在 `.env` 中将 `DOCKER_HOST` 设为 `tcp://host:port`，并按需在 `docker-compose.yml` 中移除本地 socket 挂载。
 
 ## License
 

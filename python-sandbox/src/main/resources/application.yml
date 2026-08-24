@@ -15,6 +15,7 @@ sandbox:
   session-cleanup-interval-millis: 3600000  # 清理检查间隔，默认 1 小时
   max-containers: 10                     # 最大活跃容器数量，默认 10 个
   max-containers-behavior: reject        # reject / evict-oldest
+  pull-image-on-startup: false           # 是否在应用启动时预拉取 Python 镜像
 
 logging:
   level:

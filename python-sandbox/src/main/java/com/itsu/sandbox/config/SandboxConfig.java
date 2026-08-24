@@ -28,4 +28,11 @@ public class SandboxConfig {
      * evict-oldest - 删除最早创建的容器，然后创建新容器
      */
     private String maxContainersBehavior = "reject";
+
+    /**
+     * 是否在应用启动时预拉取 Python 镜像（默认 false）
+     * true  - 启动 Bean 时调用 docker pull 预热镜像，避免首次创建会话延迟
+     * false - 不预拉取，延迟到首次创建会话时再拉取
+     */
+    private boolean pullImageOnStartup = false;
 }

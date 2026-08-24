@@ -2,6 +2,7 @@ package com.itsu.sandbox.service;
 
 import com.itsu.sandbox.config.SandboxConfig;
 import com.itsu.sandbox.exception.SandboxException;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -169,6 +170,34 @@ public class SandboxService {
             log.info("Removed container: {}", session.name);
         } catch (Exception e) {
             log.error("Remove failed: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Bean 启动钩子：根据配置预拉取 Python 镜像，避免首次创建会话时的拉取延迟。
+     * 仅在 sandbox.pull-image-on-startup=true 时启用。
+     */
+    @PostConstruct
+    public void pullImageOnStartup() {
+        if (!config.isPullImageOnStartup()) {
+            log.info("pull-image-on-startup is disabled, skip pre-pulling image: {}", config.getImage());
+            return;
+        }
+        String image = config.getImage();
+        log.info("Pre-pulling sandbox image on startup: {}", image);
+        try {
+            Process pullProcess = runCommand("docker", "pull", image);
+            int exitCode = waitForOutput(pullProcess);
+            String output = readStdout(pullProcess);
+            if (exitCode != 0) {
+                log.error("Failed to pre-pull image {} (exitCode={}): {}", image, exitCode, output);
+                return;
+            }
+            log.info("Successfully pre-pulled image: {} | output: {}", image,
+                    output.isEmpty() ? "(no output)" : output.replace("\n", " ").trim());
+        } catch (Exception e) {
+            // 预拉取失败不应阻止应用启动，首次创建会话时仍会触发拉取
+            log.error("Exception while pre-pulling image {}: {}", image, e.getMessage(), e);
         }
     }
 

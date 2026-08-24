@@ -75,7 +75,9 @@ with SandboxClient("http://localhost:8080", "your-api-key") as client:
 | **文件操作** | 上传、下载、读写沙箱中的文件 |
 | **API Key 认证** | 所有接口安全认证 |
 | **自动清理** | 会话超时自动清理容器 |
-| **容量限制** | 可配置最大活跃容器数量 |
+| **容量限制** | 可配置最大活跃容器数量及超限策略 |
+| **启动预热** | 可选择在服务启动时预拉取 Python 镜像 |
+| **远程 Docker** | 支持连接本地或远程 Docker 守护进程 |
 
 ## 安全特性
 
@@ -87,14 +89,31 @@ with SandboxClient("http://localhost:8080", "your-api-key") as client:
 
 ## 配置示例
 
-通过 `.env` 文件或环境变量自定义配置：
+首次启动前建议复制示例文件并按需修改：
 
 ```bash
+cd python-sandbox
+cp .env.example .env
+# 编辑 .env，调整至少以下字段：
+#   SANDBOX_API_KEY                  - API 鉴权密钥
+#   SANDBOX_PULL_IMAGE_ON_STARTUP    - 是否启动时预拉取镜像
+#   SANDBOX_MAX_CONTAINERS           - 最大活跃容器数
+#   DOCKER_HOST                      - Docker 连接地址（本地 socket / 远程 tcp）
+```
+
+```bash
+# .env 示例
 SANDBOX_API_KEY=my-secret-key
+SANDBOX_IMAGE=python:3.12-trixie
 SANDBOX_MAX_CONTAINERS=5
 SANDBOX_SESSION_TIMEOUT_MILLIS=3600000     # 1 小时超时
 SANDBOX_MAX_CONTAINERS_BEHAVIOR=evict-oldest  # 超过则驱逐最旧
+SANDBOX_PULL_IMAGE_ON_STARTUP=true          # 启动预拉取镜像
+DOCKER_HOST=unix:///var/run/docker.sock     # 本地 Docker
 ```
+
+完整配置项、环境变量对照表以及远程 Docker 配置说明请参阅
+[python-sandbox/README.md](python-sandbox/README.md#配置项说明)。
 
 ## 许可证
 
