@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "python-sandbox-sdk"
+version = "1.0.0"
+description = "Python SDK for Python Sandbox API - Run Python code, shell commands, and manage packages in Docker containers"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+authors = [
+    {name = "ITSU Team", email = "dev@itsu.com"}
+]
+keywords = ["sandbox", "docker", "python", "security", "shell"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Sandboxing",
+]
+
+dependencies = [
+    "requests>=2.31.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/your-org/python-sandbox"
+Repository = "https://github.com/your-org/python-sandbox"
+Documentation = "https://github.com/your-org/python-sandbox#readme"
+Issues = "https://github.com/your-org/python-sandbox/issues"
+Changelog = "https://github.com/your-org/python-sandbox/blob/main/CHANGELOG.md"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["python_sandbox_sdk*"]
