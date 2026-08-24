@@ -123,3 +123,4 @@ sdk/java-sandbox-sdk/target/
 *.bak
 *~
 .pypirc
+.venv
