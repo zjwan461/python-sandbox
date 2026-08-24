@@ -145,7 +145,17 @@ public class SandboxService {
 
     public void uploadFile(String sessionId, String containerPath, byte[] content) {
         SandboxSession session = getSession(sessionId);
-        String tmpHostFile = "/tmp/sandbox_upload_" + System.currentTimeMillis();
+        // 从 containerPath 中提取原始文件名和后缀，构造 /tmp/<原始文件名>_<时间戳>.<后缀>
+        String originalName = containerPath.contains("/")
+                ? containerPath.substring(containerPath.lastIndexOf('/') + 1)
+                : containerPath;
+        String extension = originalName.contains(".")
+                ? originalName.substring(originalName.lastIndexOf('.'))
+                : "";
+        String nameWithoutExt = originalName.contains(".")
+                ? originalName.substring(0, originalName.lastIndexOf('.'))
+                : originalName;
+        String tmpHostFile = "/tmp/" + nameWithoutExt + "_" + System.currentTimeMillis() + extension;
         try (FileOutputStream fos = new FileOutputStream(tmpHostFile)) {
             fos.write(content);
         } catch (IOException e) {
