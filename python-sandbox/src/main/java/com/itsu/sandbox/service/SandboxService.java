@@ -11,8 +11,8 @@ import org.springframework.stereotype.Service;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -35,20 +35,20 @@ public class SandboxService {
         if (sessions.containsKey(sessionId)) {
             throw new SandboxException("DUPLICATE_SESSION", "Session already exists: " + sessionId);
         }
-        
+
         // 检查并处理最大容器数量限制
         String behavior = config.getMaxContainersBehavior();
         if ("evict-oldest".equals(behavior)) {
             evictOldestSessionIfNecessary();
         }
-        
+
         int currentCount = sessions.size();
         int maxContainers = config.getMaxContainers();
         if (currentCount >= maxContainers) {
             throw new SandboxException("MAX_CONTAINERS_REACHED",
                     "Maximum container limit reached (" + maxContainers + "). Cannot create new session: " + sessionId);
         }
-        
+
         log.info("Creating container {} ({}/{})", sessionId, currentCount + 1, maxContainers);
 
         String containerName = config.getContainerNamePrefix() + sessionId;
@@ -82,23 +82,11 @@ public class SandboxService {
         SandboxSession session = getSession(sessionId);
         String tmpFile = "/tmp/sandbox_" + System.currentTimeMillis() + ".py";
 
-        Process catProcess = null;
-        OutputStream writeStream = null;
-        try {
-            catProcess = new ProcessBuilder("docker", "exec", session.containerId, "sh", "-c", "cat > " + tmpFile)
-                    .redirectInput(ProcessBuilder.Redirect.PIPE).start();
-            writeStream = catProcess.getOutputStream();
-            // OutputStream.write(byte[]) 不保证写入所有字节，需要循环写入直到全部完成
-            byte[] data = code.getBytes(StandardCharsets.UTF_8);
-            writeAllBytes(writeStream, data);
-            writeStream.flush();
-            writeStream.close();
-        } catch (IOException e) {
-            throw new SandboxException("FILE_WRITE_ERROR", "Failed to write Python code: " + e.getMessage(), e);
-        } finally {
-            closeQuietly(writeStream);
-        }
-        checkExitCode(catProcess, "Failed to write Python code");
+        // 使用 base64 编码避免管道和转义问题
+        String encoded = Base64.getEncoder().encodeToString(code.getBytes(StandardCharsets.UTF_8));
+        Process writeProcess = runCommand("docker", "exec", session.containerId,
+                "sh", "-c", "echo \"" + encoded + "\" | base64 -d > " + tmpFile);
+        checkExitCode(writeProcess, "Failed to write Python code");
 
         try {
             return execInContainer(sessionId, "python", tmpFile);
@@ -121,23 +109,11 @@ public class SandboxService {
 
     public void writeFile(String sessionId, String containerPath, String content) {
         SandboxSession session = getSession(sessionId);
-        Process catProcess = null;
-        OutputStream writeStream = null;
-        try {
-            catProcess = new ProcessBuilder("docker", "exec", session.containerId, "sh", "-c", "cat > " + containerPath)
-                    .redirectInput(ProcessBuilder.Redirect.PIPE).start();
-            writeStream = catProcess.getOutputStream();
-            // OutputStream.write(byte[]) 不保证写入所有字节，需要循环写入直到全部完成
-            byte[] data = content.getBytes(StandardCharsets.UTF_8);
-            writeAllBytes(writeStream, data);
-            writeStream.flush();
-            writeStream.close();
-        } catch (IOException e) {
-            throw new SandboxException("FILE_WRITE_ERROR", "Failed to write file: " + e.getMessage(), e);
-        } finally {
-            closeQuietly(writeStream);
-        }
-        checkExitCode(catProcess, "Failed to write file");
+        // 使用 base64 编码避免管道和转义问题
+        String encoded = Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8));
+        Process writeProcess = runCommand("docker", "exec", session.containerId,
+                "sh", "-c", "echo \"" + encoded + "\" | base64 -d > " + containerPath);
+        checkExitCode(writeProcess, "Failed to write file");
     }
 
     public String readFile(String sessionId, String containerPath) {
@@ -184,7 +160,7 @@ public class SandboxService {
     @PreDestroy
     public void stopAndRemoveAllContainers() {
         log.info("Cleaning up all sandbox containers...");
-        
+
         // 首先停止所有 python-sandbox_* 前缀的 Docker 容器
         try {
             Process ps = runCommand("docker", "ps", "-q", "--filter", "name=python-sandbox-");
@@ -205,7 +181,7 @@ public class SandboxService {
         } catch (Exception e) {
             log.warn("Failed to stop docker containers: {}", e.getMessage());
         }
-        
+
         // 同时清理本服务进程创建的会话
         sessions.keySet().forEach(this::removeContainer);
         sessions.clear();
@@ -337,30 +313,17 @@ public class SandboxService {
     }
 
     /**
-     /**
-      * 确保所有字节都被写入 OutputStream（OutputStream.write(byte[]) 不保证写入所有数据）
-      */
-     private static void writeAllBytes(OutputStream out, byte[] data) throws IOException {
-         int offset = 0;
-         while (offset < data.length) {
-             int remaining = data.length - offset;
-             out.write(data, offset, remaining);
-             // OutputStream.write(byte[], int, int) 返回 void，但实际会写入所有请求的字节
-             offset += remaining;
-         }
-     }
-    /**
      * 如果超过最大容器数量，删除最早创建的会话并清理其容器
      */
     private void evictOldestSessionIfNecessary() {
         if (sessions.size() < config.getMaxContainers()) {
             return; // 未达到限制，无需清理
         }
-        
+
         // 找到最早创建的会话（通过 lastActivity 判断）
         String oldestSessionId = null;
         Instant oldestActivity = null;
-        
+
         for (Map.Entry<String, SandboxSession> entry : sessions.entrySet()) {
             Instant activityTime = entry.getValue().getLastActivity();
             if (oldestActivity == null || activityTime.isBefore(oldestActivity)) {
@@ -368,7 +331,7 @@ public class SandboxService {
                 oldestSessionId = entry.getKey();
             }
         }
-        
+
         if (oldestSessionId != null) {
             log.info("Evicting oldest session: {} (last active: {})", oldestSessionId, oldestActivity);
             removeContainer(oldestSessionId);
