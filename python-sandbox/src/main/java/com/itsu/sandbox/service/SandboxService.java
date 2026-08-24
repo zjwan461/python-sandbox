@@ -88,7 +88,9 @@ public class SandboxService {
             catProcess = new ProcessBuilder("docker", "exec", session.containerId, "sh", "-c", "cat > " + tmpFile)
                     .redirectInput(ProcessBuilder.Redirect.PIPE).start();
             writeStream = catProcess.getOutputStream();
-            writeStream.write(code.getBytes(StandardCharsets.UTF_8));
+            // OutputStream.write(byte[]) 不保证写入所有字节，需要循环写入直到全部完成
+            byte[] data = code.getBytes(StandardCharsets.UTF_8);
+            writeAllBytes(writeStream, data);
             writeStream.flush();
             writeStream.close();
         } catch (IOException e) {
@@ -125,7 +127,9 @@ public class SandboxService {
             catProcess = new ProcessBuilder("docker", "exec", session.containerId, "sh", "-c", "cat > " + containerPath)
                     .redirectInput(ProcessBuilder.Redirect.PIPE).start();
             writeStream = catProcess.getOutputStream();
-            writeStream.write(content.getBytes(StandardCharsets.UTF_8));
+            // OutputStream.write(byte[]) 不保证写入所有字节，需要循环写入直到全部完成
+            byte[] data = content.getBytes(StandardCharsets.UTF_8);
+            writeAllBytes(writeStream, data);
             writeStream.flush();
             writeStream.close();
         } catch (IOException e) {
@@ -331,7 +335,20 @@ public class SandboxService {
             try { closeable.close(); } catch (Exception ignored) {}
         }
     }
-    
+
+    /**
+     /**
+      * 确保所有字节都被写入 OutputStream（OutputStream.write(byte[]) 不保证写入所有数据）
+      */
+     private static void writeAllBytes(OutputStream out, byte[] data) throws IOException {
+         int offset = 0;
+         while (offset < data.length) {
+             int remaining = data.length - offset;
+             out.write(data, offset, remaining);
+             // OutputStream.write(byte[], int, int) 返回 void，但实际会写入所有请求的字节
+             offset += remaining;
+         }
+     }
     /**
      * 如果超过最大容器数量，删除最早创建的会话并清理其容器
      */
