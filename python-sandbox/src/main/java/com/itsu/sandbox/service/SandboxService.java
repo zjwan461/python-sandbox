@@ -67,7 +67,8 @@ public class SandboxService {
         SandboxSession session = new SandboxSession(sessionId, containerId, containerName, Instant.now());
         sessions.put(sessionId, session);
 
-        log.info("Created and started sandbox container: {} ({})", containerName, containerId.substring(0, Math.min(12, containerId.length())));
+        log.info("Created and started sandbox container: {} ({})", containerName,
+                containerId.substring(0, Math.min(12, containerId.length())));
         return containerId;
     }
 
@@ -91,7 +92,11 @@ public class SandboxService {
         try {
             return execInContainer(sessionId, "python", tmpFile);
         } finally {
-            try { execInContainer(sessionId, "sh", "-c", "rm -f " + tmpFile); } catch (Exception e) { log.warn("Cleanup failed: {}", e.getMessage()); }
+            try {
+                execInContainer(sessionId, "sh", "-c", "rm -f " + tmpFile);
+            } catch (Exception e) {
+                log.warn("Cleanup failed: {}", e.getMessage());
+            }
         }
     }
 
@@ -152,9 +157,19 @@ public class SandboxService {
 
     public void removeContainer(String sessionId) {
         SandboxSession session = sessions.remove(sessionId);
-        if (session == null) return;
-        try { runCommand("docker", "kill", session.containerId).waitFor(); } catch (Exception e) { log.warn("Kill failed: {}", e.getMessage()); }
-        try { runCommand("docker", "rm", "-f", session.containerId).waitFor(); log.info("Removed container: {}", session.name); } catch (Exception e) { log.error("Remove failed: {}", e.getMessage()); }
+        if (session == null)
+            return;
+        try {
+            runCommand("docker", "kill", session.containerId).waitFor();
+        } catch (Exception e) {
+            log.warn("Kill failed: {}", e.getMessage());
+        }
+        try {
+            runCommand("docker", "rm", "-f", session.containerId).waitFor();
+            log.info("Removed container: {}", session.name);
+        } catch (Exception e) {
+            log.error("Remove failed: {}", e.getMessage());
+        }
     }
 
     @PreDestroy
@@ -214,7 +229,8 @@ public class SandboxService {
 
     public boolean isActive(String sessionId) {
         SandboxSession session = sessions.get(sessionId);
-        if (session == null) return false;
+        if (session == null)
+            return false;
         try {
             Process ps = runCommand("docker", "inspect", "-f", "{{.State.Running}}", session.containerId);
             return "true".equals(readStdout(ps).trim());
@@ -306,12 +322,6 @@ public class SandboxService {
         }
     }
 
-    private static void closeQuietly(Closeable closeable) {
-        if (closeable != null) {
-            try { closeable.close(); } catch (Exception ignored) {}
-        }
-    }
-
     /**
      * 如果超过最大容器数量，删除最早创建的会话并清理其容器
      */
@@ -351,10 +361,22 @@ public class SandboxService {
             this.stderr = stderr;
         }
 
-        public int getExitCode() { return exitCode; }
-        public String getStdout() { return stdout; }
-        public String getStderr() { return stderr; }
-        public boolean isSuccess() { return exitCode == 0; }
+        public int getExitCode() {
+            return exitCode;
+        }
+
+        public String getStdout() {
+            return stdout;
+        }
+
+        public String getStderr() {
+            return stderr;
+        }
+
+        public boolean isSuccess() {
+            return exitCode == 0;
+        }
+
         public String getCombinedOutput() {
             return stdout + (stderr.isEmpty() ? "" : "\n" + stderr);
         }
