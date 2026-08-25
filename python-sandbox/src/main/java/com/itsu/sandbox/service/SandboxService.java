@@ -461,7 +461,9 @@ public class SandboxService {
 
     private String extractFileName(String path) {
         int lastSlash = path.lastIndexOf('/');
-        return lastSlash >= 0 ? path.substring(lastSlash + 1) : path;
+        int lastBackslash = path.lastIndexOf('\\');
+        int lastSep = Math.max(lastSlash, lastBackslash);
+        return lastSep >= 0 ? path.substring(lastSep + 1) : path;
     }
 
     private byte[] readTarEntry(InputStream tarStream) throws IOException {
