@@ -1,0 +1,1839 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://zjwan461.github.io/python-sandbox/server/">
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../sdk/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>服务端文档 - python-sandbox</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#python-sandbox" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="python-sandbox" class="md-header__button md-logo" aria-label="python-sandbox" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            python-sandbox
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              服务端文档
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/zjwan461/python-sandbox" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="python-sandbox" class="md-nav__button md-logo" aria-label="python-sandbox" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    python-sandbox
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/zjwan461/python-sandbox" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首页
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    服务端文档
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    服务端文档
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        功能特性
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        技术栈
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        快速开始
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="快速开始">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 环境变量配置
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 构建并启动
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 验证服务
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        配置项说明
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="配置项说明">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sandbox_pull_image_on_startup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        启动预拉取镜像（SANDBOX_PULL_IMAGE_ON_STARTUP）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#docker-docker_host" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker 连接方式（DOCKER_HOST）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Docker 连接方式（DOCKER_HOST）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        本地 Docker（默认）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dockertcp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        远程 Docker（TCP，无加密）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dockertls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        远程 Docker（TLS 加密，推荐生产环境）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        连接验证
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API 文档
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="API 文档">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        认证说明
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 健康检查
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 创建沙箱会话
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 删除沙箱会话
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. 执行Python代码
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 执行Shell命令
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-pip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. pip安装包
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-pip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. pip卸载包
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-pip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. pip列出已安装包
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. 上传文件
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. 下载文件
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. 写入文件
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. 读取文件
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        项目结构
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shell 命令黑名单
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        安全注意事项
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        常见问题
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="常见问题">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#q" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: 容器重启后数据会丢失吗？
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: 如何修改默认端口？
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q-api-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: 如何自定义 API Key？
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: 如何启用启动时预拉取镜像？
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q-docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: 如何连接远程 Docker？
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#license" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        License
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SDK文档
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        功能特性
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        技术栈
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        快速开始
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="快速开始">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 环境变量配置
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 构建并启动
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 验证服务
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        配置项说明
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="配置项说明">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sandbox_pull_image_on_startup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        启动预拉取镜像（SANDBOX_PULL_IMAGE_ON_STARTUP）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#docker-docker_host" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker 连接方式（DOCKER_HOST）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Docker 连接方式（DOCKER_HOST）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        本地 Docker（默认）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dockertcp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        远程 Docker（TCP，无加密）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dockertls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        远程 Docker（TLS 加密，推荐生产环境）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        连接验证
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API 文档
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="API 文档">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        认证说明
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 健康检查
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 创建沙箱会话
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 删除沙箱会话
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. 执行Python代码
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 执行Shell命令
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-pip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. pip安装包
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-pip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. pip卸载包
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-pip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. pip列出已安装包
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. 上传文件
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. 下载文件
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. 写入文件
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. 读取文件
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        项目结构
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shell 命令黑名单
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        安全注意事项
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        常见问题
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="常见问题">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#q" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: 容器重启后数据会丢失吗？
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: 如何修改默认端口？
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q-api-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: 如何自定义 API Key？
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: 如何启用启动时预拉取镜像？
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q-docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q: 如何连接远程 Docker？
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#license" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        License
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="python-sandbox">Python Sandbox</h1>
+<p>基于 Docker 容器化技术构建的 Python 虚拟环境沙箱，使用 Java 17 + Spring Boot 3 提供 HTTP API。</p>
+<h2 id="_1">功能特性</h2>
+<ul>
+<li><strong>Python代码执行</strong>：在隔离的 Docker 容器中运行 Python 代码</li>
+<li><strong>Shell命令执行</strong>：在沙箱中执行 shell 命令（内置黑名单防护）</li>
+<li><strong>pip包管理</strong>：安装、卸载 Python 包</li>
+<li><strong>文件操作</strong>：上传、下载、写入沙箱中的文件</li>
+<li><strong>API Key认证</strong>：所有接口（除健康检查外）都需要 X-Api-Key 请求头</li>
+<li><strong>自动清理</strong>：容器重启后自动清空所有数据和依赖包</li>
+<li><strong>会话超时</strong>：可配置的空闲会话自动回收机制</li>
+<li><strong>容量限制</strong>：可配置最大活跃容器数及超出策略（拒绝 / 驱逐最旧）</li>
+<li><strong>启动预热</strong>：可选择在服务启动时预拉取 Python 镜像，避免首次会话延迟</li>
+</ul>
+<h2 id="_2">技术栈</h2>
+<ul>
+<li>Java 17</li>
+<li>Spring Boot 3.2.0</li>
+<li>Docker Java API (docker-java 3.3.4)</li>
+<li>python:3.12-trixie (沙箱基础镜像)</li>
+</ul>
+<h2 id="_3">快速开始</h2>
+<h3 id="1">1. 环境变量配置</h3>
+<p>复制示例文件并按需修改：</p>
+<pre><code class="language-bash">cp .env.example .env
+# 编辑 .env，至少修改 SANDBOX_API_KEY
+</code></pre>
+<blockquote>
+<p><code>.env.example</code> 中已包含 <code>docker-compose.yml</code> 所有可调参数，开箱即用。</p>
+</blockquote>
+<h3 id="2">2. 构建并启动</h3>
+<pre><code class="language-bash"># 使用 docker-compose 启动
+docker-compose up -d --build
+
+# 或直接使用 Maven 本地运行
+mvn spring-boot:run
+</code></pre>
+<h3 id="3">3. 验证服务</h3>
+<pre><code class="language-bash">curl http://localhost:8080/health
+</code></pre>
+<h2 id="_4">配置项说明</h2>
+<p>所有配置均可在 <code>.env</code>（推荐）或 <code>application.yml</code> 中调整，最终生效值以环境变量为准。</p>
+<table>
+<thead>
+<tr>
+<th>环境变量</th>
+<th>application.yml 对应</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SANDBOX_API_KEY</code></td>
+<td><code>sandbox.api-key</code></td>
+<td><code>sandbox-secret-key</code></td>
+<td>API 鉴权密钥</td>
+</tr>
+<tr>
+<td><code>SANDBOX_IMAGE</code></td>
+<td><code>sandbox.image</code></td>
+<td><code>python:3.12-trixie</code></td>
+<td>沙箱使用的 Python 镜像</td>
+</tr>
+<tr>
+<td><code>SANDBOX_CONTAINER_NAME_PREFIX</code></td>
+<td><code>sandbox.container-name-prefix</code></td>
+<td><code>python-sandbox-</code></td>
+<td>沙箱容器名称前缀</td>
+</tr>
+<tr>
+<td><code>SANDBOX_SESSION_TIMEOUT_MILLIS</code></td>
+<td><code>sandbox.session-timeout-millis</code></td>
+<td><code>86400000</code></td>
+<td>会话超时时间（毫秒），默认 24 小时</td>
+</tr>
+<tr>
+<td><code>SANDBOX_SESSION_CLEANUP_INTERVAL_MILLIS</code></td>
+<td><code>sandbox.session-cleanup-interval-millis</code></td>
+<td><code>3600000</code></td>
+<td>过期会话扫描间隔，默认 1 小时</td>
+</tr>
+<tr>
+<td><code>SANDBOX_MAX_CONTAINERS</code></td>
+<td><code>sandbox.max-containers</code></td>
+<td><code>10</code></td>
+<td>最大活跃沙箱容器数</td>
+</tr>
+<tr>
+<td><code>SANDBOX_MAX_CONTAINERS_BEHAVIOR</code></td>
+<td><code>sandbox.max-containers-behavior</code></td>
+<td><code>reject</code></td>
+<td>超限策略：<code>reject</code> / <code>evict-oldest</code></td>
+</tr>
+<tr>
+<td><code>SANDBOX_PULL_IMAGE_ON_STARTUP</code></td>
+<td><code>sandbox.pull-image-on-startup</code></td>
+<td><code>false</code></td>
+<td>是否在服务启动时预拉取镜像</td>
+</tr>
+<tr>
+<td><code>DOCKER_HOST</code></td>
+<td><code>sandbox.docker-host</code></td>
+<td>留空（自动检测）</td>
+<td>Docker 守护进程连接地址</td>
+</tr>
+<tr>
+<td><code>DOCKER_CERT_PATH</code></td>
+<td><code>sandbox.docker-cert-path</code></td>
+<td>留空</td>
+<td>TLS 证书目录路径</td>
+</tr>
+<tr>
+<td><code>DOCKER_TLS_VERIFY</code></td>
+<td><code>sandbox.docker-tls-verify</code></td>
+<td><code>false</code></td>
+<td>是否启用 TLS 验证</td>
+</tr>
+<tr>
+<td><code>DOCKER_API_VERSION</code></td>
+<td><code>sandbox.docker-api-version</code></td>
+<td>留空（使用默认）</td>
+<td>Docker API 版本号</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sandbox_pull_image_on_startup">启动预拉取镜像（<code>SANDBOX_PULL_IMAGE_ON_STARTUP</code>）</h3>
+<p>服务启动时（<code>SandboxService</code> 的 <code>@PostConstruct</code> 钩子）会按需预拉取 Python 镜像：</p>
+<ul>
+<li><strong><code>false</code>（默认）</strong>：不预拉取，首次创建会话时才触发拉取（冷启动稍慢）</li>
+<li><strong><code>true</code></strong>：启动 Bean 时同步执行 <code>docker pull</code>，确保首个会话请求零延迟</li>
+</ul>
+<blockquote>
+<p>拉取失败仅记录日志，不会阻断应用启动。</p>
+</blockquote>
+<h3 id="docker-docker_host">Docker 连接方式（<code>DOCKER_HOST</code>）</h3>
+<p>系统使用 <strong>docker-java API</strong> 直接操作 Docker 守护进程，支持本地和远程连接。</p>
+<h4 id="docker">本地 Docker（默认）</h4>
+<p><code>DOCKER_HOST</code> 留空时自动检测本地 Docker socket，也可明确指定：</p>
+<pre><code class="language-env">DOCKER_HOST=
+# 或明确指定
+DOCKER_HOST=unix:///var/run/docker.sock
+</code></pre>
+<blockquote>
+<p>docker-compose 部署时需要挂载宿主机 socket：
+<code>yaml
+volumes:
+  - /var/run/docker.sock:/var/run/docker.sock</code></p>
+</blockquote>
+<h4 id="dockertcp">远程 Docker（TCP，无加密）</h4>
+<blockquote>
+<p>⚠️ 仅适用于内网环境，Docker API 无认证，任何能访问该端口的人都可以控制 Docker 主机。</p>
+</blockquote>
+<p><strong>1. 服务端配置（<code>.env</code>）</strong>：</p>
+<pre><code class="language-env">DOCKER_HOST=tcp://192.168.1.100:2375
+</code></pre>
+<p><strong>2. 远程 Docker 主机配置</strong>：</p>
+<p>编辑远程主机上的 <code>/etc/docker/daemon.json</code>：</p>
+<pre><code class="language-json">{
+  &quot;hosts&quot;: [&quot;unix:///var/run/docker.sock&quot;, &quot;tcp://0.0.0.0:2375&quot;]
+}
+</code></pre>
+<p>重启 Docker 服务：</p>
+<pre><code class="language-bash">sudo systemctl restart docker
+</code></pre>
+<p><strong>3. docker-compose.yml 调整</strong>：</p>
+<p>注释或删除本地 socket 挂载：</p>
+<pre><code class="language-yaml">services:
+  python-sandbox:
+    # volumes:
+    #   - /var/run/docker.sock:/var/run/docker.sock   # 注释掉
+    environment:
+      - DOCKER_HOST=tcp://192.168.1.100:2375
+</code></pre>
+<h4 id="dockertls">远程 Docker（TLS 加密，推荐生产环境）</h4>
+<p><strong>1. 生成 TLS 证书</strong>：</p>
+<p>在远程 Docker 主机上执行以下脚本生成 CA 和客户端证书：</p>
+<pre><code class="language-bash">#!/bin/bash
+# === 配置变量 ===
+SERVER_IP=&quot;192.168.1.100&quot;    # 远程 Docker 主机 IP
+CERT_DIR=&quot;./docker-certs&quot;    # 证书输出目录
+
+mkdir -p &quot;$CERT_DIR&quot;
+
+# 生成 CA 密钥和证书
+openssl genrsa -out &quot;$CERT_DIR/ca-key.pem&quot; 4096
+openssl req -x509 -new -nodes -key &quot;$CERT_DIR/ca-key.pem&quot; \
+  -days 3650 -out &quot;$CERT_DIR/ca.pem&quot; \
+  -subj &quot;/CN=docker-ca&quot;
+
+# 生成服务端密钥和证书
+openssl genrsa -out &quot;$CERT_DIR/server-key.pem&quot; 4096
+
+cat &gt; &quot;$CERT_DIR/server-ext.cnf&quot; &lt;&lt; EOF
+subjectAltName = IP:${SERVER_IP},IP:127.0.0.1
+EOF
+
+openssl req -new -key &quot;$CERT_DIR/server-key.pem&quot; \
+  -out &quot;$CERT_DIR/server.csr&quot; \
+  -subj &quot;/CN=docker-server&quot;
+
+openssl x509 -req -in &quot;$CERT_DIR/server.csr&quot; \
+  -CA &quot;$CERT_DIR/ca.pem&quot; -CAkey &quot;$CERT_DIR/ca-key.pem&quot; \
+  -CAcreateserial -out &quot;$CERT_DIR/server-cert.pem&quot; \
+  -days 3650 -extfile &quot;$CERT_DIR/server-ext.cnf&quot;
+
+# 生成客户端密钥和证书
+openssl genrsa -out &quot;$CERT_DIR/client-key.pem&quot; 4096
+
+cat &gt; &quot;$CERT_DIR/client-ext.cnf&quot; &lt;&lt; EOF
+extendedKeyUsage = clientAuth
+EOF
+
+openssl req -new -key &quot;$CERT_DIR/client-key.pem&quot; \
+  -out &quot;$CERT_DIR/client.csr&quot; \
+  -subj &quot;/CN=docker-client&quot;
+
+openssl x509 -req -in &quot;$CERT_DIR/client.csr&quot; \
+  -CA &quot;$CERT_DIR/ca.pem&quot; -CAkey &quot;$CERT_DIR/ca-key.pem&quot; \
+  -CAcreateserial -out &quot;$CERT_DIR/client-cert.pem&quot; \
+  -days 3650 -extfile &quot;$CERT_DIR/client-ext.cnf&quot;
+
+# 清理中间文件
+rm -f &quot;$CERT_DIR&quot;/*.csr &quot;$CERT_DIR&quot;/*.cnf &quot;$CERT_DIR&quot;/*.srl
+
+echo &quot;证书生成完毕，目录: $CERT_DIR&quot;
+</code></pre>
+<p><strong>2. 配置远程 Docker 主机</strong>：</p>
+<p>将服务端证书复制到 Docker 配置目录：</p>
+<pre><code class="language-bash">sudo cp server-cert.pem server-key.pem ca.pem /etc/docker/
+</code></pre>
+<p>编辑 <code>/etc/docker/daemon.json</code>：</p>
+<pre><code class="language-json">{
+  &quot;hosts&quot;: [&quot;unix:///var/run/docker.sock&quot;, &quot;tcp://0.0.0.0:2376&quot;],
+  &quot;tls&quot;: true,
+  &quot;tlscacert&quot;: &quot;/etc/docker/ca.pem&quot;,
+  &quot;tlscert&quot;: &quot;/etc/docker/server-cert.pem&quot;,
+  &quot;tlskey&quot;: &quot;/etc/docker/server-key.pem&quot;,
+  &quot;tlsverify&quot;: true
+}
+</code></pre>
+<p>重启 Docker 服务：</p>
+<pre><code class="language-bash">sudo systemctl restart docker
+</code></pre>
+<p><strong>3. 服务端配置（<code>.env</code>）</strong>：</p>
+<p>将客户端证书（<code>ca.pem</code>、<code>client-cert.pem</code>、<code>client-key.pem</code>）放到服务端可访问的目录，然后配置：</p>
+<pre><code class="language-env">DOCKER_HOST=tcp://192.168.1.100:2376
+DOCKER_CERT_PATH=/path/to/client-certs    # 包含 ca.pem、cert.pem（即 client-cert.pem）、key.pem（即 client-key.pem）
+DOCKER_TLS_VERIFY=true
+</code></pre>
+<blockquote>
+<p>⚠️ <code>DOCKER_CERT_PATH</code> 目录下的三个文件必须命名为：
+- <code>ca.pem</code> — CA 证书
+- <code>cert.pem</code> — 客户端证书（即生成的 <code>client-cert.pem</code>）
+- <code>key.pem</code> — 客户端私钥（即生成的 <code>client-key.pem</code>）</p>
+</blockquote>
+<p><strong>4. docker-compose.yml 调整</strong>：</p>
+<pre><code class="language-yaml">services:
+  python-sandbox:
+    # volumes:
+    #   - /var/run/docker.sock:/var/run/docker.sock   # 注释掉
+    volumes:
+      - ./docker-certs:/app/certs:ro                   # 挂载客户端证书（只读）
+    environment:
+      - DOCKER_HOST=tcp://192.168.1.100:2376
+      - DOCKER_CERT_PATH=/app/certs
+      - DOCKER_TLS_VERIFY=true
+</code></pre>
+<h4 id="_5">连接验证</h4>
+<p>配置完成后，启动服务并访问健康检查接口验证连接：</p>
+<pre><code class="language-bash">curl http://localhost:8080/health
+</code></pre>
+<p>成功响应示例：</p>
+<pre><code class="language-json">{
+  &quot;status&quot;: &quot;UP&quot;,
+  &quot;activeContainers&quot;: 0
+}
+</code></pre>
+<p>如果连接失败，请检查：
+- 远程主机防火墙是否开放了对应端口（2375 或 2376）
+- Docker 守护进程是否正确监听（<code>ss -tlnp | grep 2375</code>）
+- TLS 证书是否正确且未过期
+- 服务端日志中的具体错误信息</p>
+<h2 id="api">API 文档</h2>
+<h3 id="_6">认证说明</h3>
+<p>除了 <code>/health</code> 端点外，所有 API 都需要在请求头中包含 <code>X-Api-Key</code>：</p>
+<pre><code>X-Api-Key: your-secret-api-key-here
+</code></pre>
+<h3 id="1_1">1. 健康检查</h3>
+<pre><code>GET /api/sandbox/health
+</code></pre>
+<p>响应示例：</p>
+<pre><code class="language-json">{
+  &quot;status&quot;: &quot;UP&quot;,
+  &quot;activeContainers&quot;: 0
+}
+</code></pre>
+<h3 id="2_1">2. 创建沙箱会话</h3>
+<pre><code>POST /api/sandbox/session
+Headers: X-Api-Key: your-key
+</code></pre>
+<p>响应示例：</p>
+<pre><code class="language-json">{
+  &quot;sessionId&quot;: &quot;session-1234567890-abc1234&quot;,
+  &quot;message&quot;: &quot;Sandbox session created&quot;
+}
+</code></pre>
+<h3 id="3_1">3. 删除沙箱会话</h3>
+<pre><code>DELETE /api/sandbox/session/{sessionId}
+Headers: X-Api-Key: your-key
+</code></pre>
+<h3 id="4-python">4. 执行Python代码</h3>
+<pre><code>POST /api/sandbox/exec/python
+Content-Type: application/json
+Headers: X-Api-Key: your-key
+
+{
+  &quot;sessionId&quot;: &quot;session-xxx&quot;,
+  &quot;code&quot;: &quot;print('Hello, World!')\nimport json\nprint(json.dumps({'status': 'ok'}))&quot;
+}
+</code></pre>
+<p>响应示例：</p>
+<pre><code class="language-json">{
+  &quot;exitCode&quot;: 0,
+  &quot;stdout&quot;: &quot;Hello, World!\n{\&quot;status\&quot;: \&quot;ok\&quot;}\n&quot;,
+  &quot;stderr&quot;: &quot;&quot;
+}
+</code></pre>
+<h3 id="5-shell">5. 执行Shell命令</h3>
+<pre><code>POST /api/sandbox/exec/shell
+Content-Type: application/json
+Headers: X-Api-Key: your-key
+
+{
+  &quot;sessionId&quot;: &quot;session-xxx&quot;,
+  &quot;command&quot;: &quot;ls -la &amp;&amp; pwd&quot;
+}
+</code></pre>
+<h3 id="6-pip">6. pip安装包</h3>
+<pre><code>POST /api/sandbox/pip/install
+Content-Type: application/json
+Headers: X-Api-Key: your-key
+
+{
+  &quot;sessionId&quot;: &quot;session-xxx&quot;,
+  &quot;package&quot;: &quot;requests&quot;
+}
+</code></pre>
+<h3 id="7-pip">7. pip卸载包</h3>
+<pre><code>POST /api/sandbox/pip/uninstall
+Content-Type: application/json
+Headers: X-Api-Key: your-key
+
+{
+  &quot;sessionId&quot;: &quot;session-xxx&quot;,
+  &quot;package&quot;: &quot;requests&quot;
+}
+</code></pre>
+<h3 id="8-pip">8. pip列出已安装包</h3>
+<pre><code>GET /api/sandbox/pip/list?sessionId=session-xxx
+Headers: X-Api-Key: your-key
+</code></pre>
+<h3 id="9">9. 上传文件</h3>
+<pre><code>POST /api/sandbox/file/upload
+Content-Type: multipart/form-data
+Headers: X-Api-Key: your-key
+
+FormData:
+- sessionId: session-xxx
+- path: /root/uploads/test.txt
+- file: [binary data]
+</code></pre>
+<h3 id="10">10. 下载文件</h3>
+<pre><code>GET /api/sandbox/file/download?sessionId=session-xxx&amp;path=/root/uploads/test.txt
+Headers: X-Api-Key: your-key
+</code></pre>
+<h3 id="11">11. 写入文件</h3>
+<pre><code>POST /api/sandbox/file/write
+Content-Type: application/json
+Headers: X-Api-Key: your-key
+
+{
+  &quot;sessionId&quot;: &quot;session-xxx&quot;,
+  &quot;path&quot;: &quot;/root/data/output.txt&quot;,
+  &quot;content&quot;: &quot;Hello from sandbox!&quot;
+}
+</code></pre>
+<h3 id="12">12. 读取文件</h3>
+<pre><code>GET /api/sandbox/file/read?sessionId=session-xxx&amp;path=/root/data/output.txt
+Headers: X-Api-Key: your-key
+</code></pre>
+<h2 id="_7">项目结构</h2>
+<pre><code>python-sandbox/
+├── pom.xml
+├── Dockerfile
+├── docker-compose.yml
+├── .env.example                # 环境变量模板（cp .env.example .env 后修改）
+└── src/
+    └── main/
+        ├── java/
+        │   └── com/itsu/sandbox/
+        │       ├── PythonSandboxApplication.java
+        │       ├── config/
+        │       │   ├── SandboxConfig.java
+        │       │   └── WebConfig.java
+        │       ├── controller/
+        │       │   ├── SandboxController.java
+        │       │   ├── PythonExecRequest.java
+        │       │   ├── ShellExecRequest.java
+        │       │   ├── PipInstallRequest.java
+        │       │   └── FileWriteRequest.java
+        │       ├── exception/
+        │       │   ├── SandboxException.java
+        │       │   └── GlobalExceptionHandler.java
+        │       └── service/
+        │           └── SandboxService.java    # @PostConstruct 启动钩子在此
+        └── resources/
+            └── application.yml
+</code></pre>
+<h2 id="shell">Shell 命令黑名单</h2>
+<p>本系统内置了完善的 Shell 命令安全防护机制，以下类型命令将被自动拦截：</p>
+<table>
+<thead>
+<tr>
+<th>风险等级</th>
+<th>类别</th>
+<th>示例命令</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>🔴 致命</td>
+<td>文件系统破坏</td>
+<td><code>rm -rf /</code>, <code>rm -rf /*</code> (除/tmp外)</td>
+</tr>
+<tr>
+<td>🔴 致命</td>
+<td>磁盘格式化</td>
+<td><code>mkfs</code>, <code>fdisk</code>, <code>dd if=... of=/dev/</code></td>
+</tr>
+<tr>
+<td>🔴 致命</td>
+<td>磁盘覆盖</td>
+<td><code>&gt; /dev/sda</code>, <code>truncate --size=0 /dev/</code></td>
+</tr>
+<tr>
+<td>🟠 高危</td>
+<td>网络攻击工具</td>
+<td><code>nc -e</code>, <code>socat exec:""</code>, <code>nmap -sS</code></td>
+</tr>
+<tr>
+<td>🟠 高危</td>
+<td>挖矿程序</td>
+<td><code>xmrig</code>, <code>minerd</code>, <code>stratum+</code></td>
+</tr>
+<tr>
+<td>🟠 高危</td>
+<td>权限提升</td>
+<td><code>sudo</code>, <code>chmod 777</code>, <code>chattr -i</code></td>
+</tr>
+<tr>
+<td>🟠 高危</td>
+<td>系统配置修改</td>
+<td><code>sysctl kernel.panic</code>, <code>iptables -F</code></td>
+</tr>
+<tr>
+<td>🟠 高危</td>
+<td>进程杀死</td>
+<td><code>kill -9</code>, <code>killall -9</code></td>
+</tr>
+<tr>
+<td>🟠 高危</td>
+<td>敏感文件访问</td>
+<td><code>/etc/shadow</code>, <code>/root/.ssh/</code></td>
+</tr>
+<tr>
+<td>🟠 高危</td>
+<td>数据外传</td>
+<td><code>curl --data @/etc/shadow</code></td>
+</tr>
+<tr>
+<td>🟡 中等</td>
+<td>危险管道执行</td>
+<td><code>curl ... \| sh</code>, <code>eval $()</code></td>
+</tr>
+<tr>
+<td>🟡 中等</td>
+<td>端口扫描</td>
+<td><code>masscan</code>, <code>zmap</code></td>
+</tr>
+<tr>
+<td>🟢 基础</td>
+<td>系统关机</td>
+<td><code>shutdown</code>, <code>reboot</code>, <code>halt</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="_8">安全注意事项</h2>
+<ol>
+<li><strong>API Key 保护</strong>：请妥善保管 <code>SANDBOX_API_KEY</code>，不要暴露在公共仓库中</li>
+<li><strong>网络隔离</strong>：建议将沙箱服务部署在内部网络，不要直接暴露到公网</li>
+<li><strong>资源限制</strong>：生产环境建议配置 Docker 容器的 CPU 和内存限制</li>
+<li><strong>额外防护</strong>：如需更严格的控制，可进一步扩展 <code>ShellCommandValidator</code> 类中的规则</li>
+</ol>
+<h2 id="_9">常见问题</h2>
+<h3 id="q">Q: 容器重启后数据会丢失吗？</h3>
+<p>A: 是的，每次重启容器都会清空所有 Python 包和上传的文件。这是设计如此。</p>
+<h3 id="q_1">Q: 如何修改默认端口？</h3>
+<p>A: 在 <code>application.yml</code> 中修改 <code>server.port</code> 配置项。</p>
+<h3 id="q-api-key">Q: 如何自定义 API Key？</h3>
+<p>A: 通过环境变量 <code>SANDBOX_API_KEY</code> 或 <code>application.yml</code> 中的 <code>sandbox.api-key</code> 配置。</p>
+<h3 id="q_2">Q: 如何启用启动时预拉取镜像？</h3>
+<p>A: 在 <code>.env</code> 中设置 <code>SANDBOX_PULL_IMAGE_ON_STARTUP=true</code>，重启服务即可。</p>
+<h3 id="q-docker">Q: 如何连接远程 Docker？</h3>
+<p>A: 在 <code>.env</code> 中将 <code>DOCKER_HOST</code> 设为 <code>tcp://host:port</code>，并按需在 <code>docker-compose.yml</code> 中移除本地 socket 挂载。</p>
+<h2 id="license">License</h2>
+<p>MIT</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
