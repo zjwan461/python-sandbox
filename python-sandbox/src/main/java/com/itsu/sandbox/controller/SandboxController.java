@@ -76,7 +76,7 @@ public class SandboxController {
         // 执行安全验证
         shellCommandValidator.validate(command);
         
-        CommandResult result = sandboxService.execInContainer(sessionId, "sh", "-c", "'" + command + "'");
+        CommandResult result = sandboxService.execInContainer(sessionId, "sh", "-c", command);
         
         Map<String, Object> response = new HashMap<>();
         response.put("exitCode", result.getExitCode());
