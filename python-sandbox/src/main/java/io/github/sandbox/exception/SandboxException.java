@@ -1,4 +1,4 @@
-package com.itsu.sandbox.exception;
+package io.github.sandbox.exception;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;

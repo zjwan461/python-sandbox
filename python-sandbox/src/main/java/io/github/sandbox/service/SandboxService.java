@@ -1,4 +1,4 @@
-package com.itsu.sandbox.service;
+package io.github.sandbox.service;
 
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
@@ -16,8 +16,9 @@ import com.github.dockerjava.core.DockerClientConfig;
 import com.github.dockerjava.core.DockerClientImpl;
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
 import com.github.dockerjava.transport.DockerHttpClient;
-import com.itsu.sandbox.config.SandboxConfig;
-import com.itsu.sandbox.exception.SandboxException;
+
+import io.github.sandbox.config.SandboxConfig;
+import io.github.sandbox.exception.SandboxException;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.Data;

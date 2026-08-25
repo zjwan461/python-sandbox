@@ -1,4 +1,4 @@
-package com.itsu.sandbox.exception;
+package io.github.sandbox.exception;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

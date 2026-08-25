@@ -11,7 +11,7 @@
         <relativePath/>
     </parent>
     
-    <groupId>com.example</groupId>
+    <groupId>io.github</groupId>
     <artifactId>python-sandbox</artifactId>
     <version>1.0.0</version>
     <name>Python Sandbox</name>

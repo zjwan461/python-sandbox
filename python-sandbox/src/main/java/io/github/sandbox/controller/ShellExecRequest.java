@@ -1,4 +1,4 @@
-package com.itsu.sandbox.controller;
+package io.github.sandbox.controller;
 
 import lombok.Data;
 

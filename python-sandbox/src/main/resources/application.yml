@@ -29,4 +29,4 @@ sandbox:
 
 logging:
   level:
-    com.itsu.sandbox: INFO
+    io.github.sandbox: INFO

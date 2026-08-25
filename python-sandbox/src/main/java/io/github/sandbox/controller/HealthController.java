@@ -1,9 +1,10 @@
-package com.itsu.sandbox.controller;
+package io.github.sandbox.controller;
 
-import com.itsu.sandbox.service.SandboxService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import io.github.sandbox.service.SandboxService;
 
 import java.util.HashMap;
 import java.util.Map;

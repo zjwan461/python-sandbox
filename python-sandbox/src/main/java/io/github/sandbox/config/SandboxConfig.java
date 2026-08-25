@@ -1,4 +1,4 @@
-package com.itsu.sandbox.config;
+package io.github.sandbox.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

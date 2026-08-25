@@ -1,8 +1,5 @@
-package com.itsu.sandbox.controller;
+package io.github.sandbox.controller;
 
-import com.itsu.sandbox.service.SandboxService;
-import com.itsu.sandbox.service.SandboxService.CommandResult;
-import com.itsu.sandbox.service.ShellCommandValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -10,6 +7,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import io.github.sandbox.service.SandboxService;
+import io.github.sandbox.service.ShellCommandValidator;
+import io.github.sandbox.service.SandboxService.CommandResult;
 
 import java.io.IOException;
 import java.util.HashMap;

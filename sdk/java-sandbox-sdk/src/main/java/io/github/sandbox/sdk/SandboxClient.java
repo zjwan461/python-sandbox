@@ -1,7 +1,8 @@
-package com.itsu.sandbox.sdk;
+package io.github.sandbox.sdk;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.itsu.sandbox.sdk.dto.SandboxResponse;
+
+import io.github.sandbox.sdk.dto.SandboxResponse;
 
 import java.io.*;
 import java.net.HttpURLConnection;

@@ -1,4 +1,4 @@
-package com.itsu.sandbox.sdk.dto;
+package io.github.sandbox.sdk.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
