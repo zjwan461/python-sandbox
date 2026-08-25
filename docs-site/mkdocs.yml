@@ -1,0 +1,9 @@
+site_name: python-sandbox
+site_url: https://zjwan461.github.io/python-sandbox
+repo_url: https://github.com/zjwan461/python-sandbox
+theme:
+  name: material
+nav:
+  - 首页: index.md
+  - 服务端文档: server.md
+  - SDK文档: sdk.md
