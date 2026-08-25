@@ -59,6 +59,7 @@ public class SandboxService {
 
     @PreDestroy
     public void destroy() {
+        stopAndRemoveAllContainers();
         if (dockerClient != null) {
             try {
                 dockerClient.close();
@@ -328,7 +329,6 @@ public class SandboxService {
         }
     }
 
-    @PreDestroy
     public void stopAndRemoveAllContainers() {
         log.info("Cleaning up all sandbox containers...");
         try {

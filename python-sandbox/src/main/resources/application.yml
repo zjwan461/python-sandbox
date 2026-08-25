@@ -17,7 +17,7 @@ sandbox:
   max-containers-behavior: reject        # reject / evict-oldest
   pull-image-on-startup: false           # 是否在应用启动时预拉取 Python 镜像
   # Docker 连接配置
-  docker-host: ${DOCKER_HOST:tcp://43.159.194.62:32375}           # Docker 守护进程地址，留空自动检测本地 socket
+  docker-host: ${DOCKER_HOST:unix:///var/run/docker.sock}           # Docker 守护进程地址，留空自动检测本地 socket
                                          # 示例：tcp://192.168.1.100:2375 或 unix:///var/run/docker.sock
   docker-cert-path: ${DOCKER_CERT_PATH:} # TLS 证书目录路径（启用 TLS 时必填）
                                          # 目录下应包含 ca.pem、cert.pem、key.pem
