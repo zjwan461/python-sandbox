@@ -126,15 +126,27 @@ public class SandboxService {
         cleanupContainer(containerName);
 
         try {
-            CreateContainerResponse response = dockerClient.createContainerCmd(config.getImage())
+            // 构建容器创建命令
+            var createCmd = dockerClient.createContainerCmd(config.getImage())
                     .withName(containerName)
                     .withEnv("PYTHONUNBUFFERED=1")
                     .withTty(true)
                     .withAttachStdin(true)
                     .withAttachStdout(true)
-                    .withAttachStderr(true)
-                    .exec();
+                    .withAttachStderr(true);
 
+            // 设置容器内存限制（containerMemoryLimit > 0 时生效）
+            long memoryLimit = config.getContainerMemoryLimit();
+            if (memoryLimit > 0) {
+                createCmd.withMemory(memoryLimit);
+                // 同时设置 swap 为 memory 的 2 倍，避免 swap 过大
+                createCmd.withMemorySwap(memoryLimit * 2);
+                log.info("Container memory limit: {} bytes ({} MB)", memoryLimit, memoryLimit / (1024 * 1024));
+            } else {
+                log.info("Container memory limit: unlimited");
+            }
+
+            CreateContainerResponse response = createCmd.exec();
             String containerId = response.getId();
             dockerClient.startContainerCmd(containerId).exec();
 

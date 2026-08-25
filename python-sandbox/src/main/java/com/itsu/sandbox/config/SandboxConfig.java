@@ -36,6 +36,19 @@ public class SandboxConfig {
      */
     private boolean pullImageOnStartup = false;
 
+    // ==================== 容器资源限制 ====================
+
+    /**
+     * 单个容器的最大内存限制（字节）。
+     * 默认 512MB (536870912 字节)。
+     * 设置为 0 或负数表示不限制。
+     * 示例：
+     *   - 512MB = 536870912
+     *   - 1GB = 1073741824
+     *   - 256MB = 268435456
+     */
+    private long containerMemoryLimit = 536870912L;
+
     // ==================== Docker 连接配置 ====================
 
     /**
