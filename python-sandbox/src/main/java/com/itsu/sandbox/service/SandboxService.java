@@ -144,39 +144,43 @@ public class SandboxService {
         return baos.toByteArray();
     }
 
-    public void uploadFile(String sessionId, String containerPath, byte[] content, String originalFileName) {
+    public String uploadFile(String sessionId, String containerPath, byte[] content, String originalFileName) {
         SandboxSession session = getSession(sessionId);
-        String tmpHostFile = null;
-        if (StringUtils.hasText(originalFileName)) {
-            // 使用原始文件名和时间戳构造临时文件路径
-            String extension = originalFileName.contains(".")
-                    ? originalFileName.substring(originalFileName.lastIndexOf('.'))
-                    : "";
-            String nameWithoutExt = originalFileName.contains(".")
-                    ? originalFileName.substring(0, originalFileName.lastIndexOf('.'))
-                    : originalFileName;
-            tmpHostFile = "/tmp/" + nameWithoutExt + "_" + System.currentTimeMillis() + extension;
+
+        // 确定容器中实际的文件路径
+        // 逻辑：
+        // - 如果 path 以 / 结尾，视为目录，拼接文件名
+        // - 如果 path 不以 / 结尾，且有扩展名（含 .），视为完整文件路径
+        // - 其他情况视为目录，拼接文件名
+        String actualContainerPath;
+        String fileExtension = originalFileName.contains(".")
+                ? originalFileName.substring(originalFileName.lastIndexOf('.'))
+                : "";
+        
+        if (containerPath.endsWith("/")) {
+            // path 以 / 结尾，明确是目录
+            actualContainerPath = containerPath + originalFileName;
+        } else if (containerPath.contains(".")) {
+            // path 包含扩展名，视为完整文件路径
+            actualContainerPath = containerPath;
         } else {
-            // 从 containerPath 中提取原始文件名和后缀，构造 /tmp/<原始文件名>_<时间戳>.<后缀>
-            String originalName = containerPath.contains("/")
-                    ? containerPath.substring(containerPath.lastIndexOf('/') + 1)
-                    : containerPath;
-            String extension = originalName.contains(".")
-                    ? originalName.substring(originalName.lastIndexOf('.'))
-                    : "";
-            String nameWithoutExt = originalName.contains(".")
-                    ? originalName.substring(0, originalName.lastIndexOf('.'))
-                    : originalName;
-            tmpHostFile = "/tmp/" + nameWithoutExt + "_" + System.currentTimeMillis() + extension;
+            // 没有扩展名，视为目录
+            actualContainerPath = containerPath + "/" + originalFileName;
         }
+
+        // 构造宿主机临时文件路径
+        String tmpHostFile = "/tmp/upload_" + System.currentTimeMillis() + fileExtension;
         try (FileOutputStream fos = new FileOutputStream(tmpHostFile)) {
             fos.write(content);
         } catch (IOException e) {
             throw new SandboxException("FILE_WRITE_ERROR", "Failed to save uploaded file: " + e.getMessage(), e);
         }
-        Process cpProcess = runCommand("docker", "cp", tmpHostFile, session.containerId + ":" + containerPath);
+        Process cpProcess = runCommand("docker", "cp", tmpHostFile, session.containerId + ":" + actualContainerPath);
         checkExitCode(cpProcess, "Failed to upload file");
         new File(tmpHostFile).delete();
+        
+        // 返回上传到容器中的实际文件路径
+        return actualContainerPath;
     }
 
     public void removeContainer(String sessionId) {
