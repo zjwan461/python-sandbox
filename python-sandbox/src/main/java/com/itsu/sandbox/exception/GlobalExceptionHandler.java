@@ -2,12 +2,18 @@ package com.itsu.sandbox.exception;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestControllerAdvice
@@ -31,6 +37,67 @@ public class GlobalExceptionHandler {
         response.put("message", e.getMessage());
         return response;
     }
+    
+    // ==================== 参数校验异常 -> 400 ====================
+    
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, Object> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
+        String message = e.getBindingResult().getFieldErrors().stream()
+                .map(fieldError -> fieldError.getField() + ": " + fieldError.getDefaultMessage())
+                .collect(Collectors.joining("; "));
+        Map<String, Object> response = new HashMap<>();
+        response.put("error", "INVALID_PARAMETER");
+        response.put("message", message);
+        return response;
+    }
+    
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, Object> handleMissingServletRequestParameterException(MissingServletRequestParameterException e) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("error", "MISSING_PARAMETER");
+        response.put("message", "Missing required parameter: " + e.getParameterName());
+        return response;
+    }
+    
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, Object> handleMissingServletRequestPartException(MissingServletRequestPartException e) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("error", "MISSING_PARAMETER");
+        response.put("message", "Missing required part: " + e.getRequestPartName());
+        return response;
+    }
+    
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, Object> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("error", "INVALID_REQUEST_BODY");
+        response.put("message", "Request body is malformed or unreadable");
+        return response;
+    }
+    
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, Object> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException e) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("error", "INVALID_PARAMETER");
+        response.put("message", "Parameter '" + e.getName() + "' has invalid type");
+        return response;
+    }
+    
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, Object> handleIllegalArgumentException(IllegalArgumentException e) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("error", "INVALID_PARAMETER");
+        response.put("message", e.getMessage());
+        return response;
+    }
+    
+    // ==================== 未知异常 -> 500 ====================
     
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
