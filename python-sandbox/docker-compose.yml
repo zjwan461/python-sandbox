@@ -3,6 +3,7 @@ version: '3.8'
 services:
   sandbox-api:
     build: .
+    image: ghcr.io/zjwan461/python-sandbox:v1.0.0
     container_name: python-sandbox-api
     ports:
       - "8080:8080"
