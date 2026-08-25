@@ -45,7 +45,7 @@ docker-compose up -d --build
 #### Java
 
 ```java
-import com.itsu.sandbox.sdk.SandboxClient;
+import io.github.sandbox.sdk.SandboxClient;
 
 try (SandboxClient client = new SandboxClient("http://localhost:8080", "your-api-key")) {
     String sessionId = client.createSession();

@@ -12,7 +12,7 @@ Python Sandbox 的官方客户端 SDK，提供 Java 和 Python 两种语言的�
 
 ```xml
 <dependency>
-    <groupId>com.itsu.sandbox</groupId>
+    <groupId>io.github.sandbox</groupId>
     <artifactId>sdk-java</artifactId>
     <version>1.0.0</version>
 </dependency>
@@ -21,8 +21,8 @@ Python Sandbox 的官方客户端 SDK，提供 Java 和 Python 两种语言的�
 #### 基本使用
 
 ```java
-import com.itsu.sandbox.sdk.SandboxClient;
-import com.itsu.sandbox.sdk.dto.SandboxResponse;
+import io.github.sandbox.sdk.SandboxClient;
+import io.github.sandbox.sdk.dto.SandboxResponse;
 
 public class Main {
     public static void main(String[] args) throws Exception {
