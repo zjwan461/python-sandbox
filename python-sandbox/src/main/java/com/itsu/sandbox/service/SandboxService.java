@@ -132,11 +132,13 @@ public class SandboxService {
 
     public byte[] downloadFile(String sessionId, String containerPath) {
         SandboxSession session = getSession(sessionId);
-        Process cpProcess = runCommand("docker", "cp", session.containerId + ":" + containerPath, "/dev/stdout");
-        checkExitCode(cpProcess, "Failed to copy file from container");
+        // 使用 docker exec cat 代替 docker cp，避免 redirectErrorStream(true) 导致 stderr 被合并到 stdout
+        // 使得 checkExitCode 中 readStderr 无法正确读取错误信息
+        Process catProcess = runCommand("docker", "exec", session.containerId, "cat", containerPath);
+        checkExitCode(catProcess, "Failed to read file: " + containerPath);
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try (InputStream is = cpProcess.getInputStream()) {
+        try (InputStream is = catProcess.getInputStream()) {
             is.transferTo(baos);
         } catch (IOException e) {
             throw new SandboxException("FILE_READ_ERROR", "Failed to read file: " + e.getMessage(), e);
