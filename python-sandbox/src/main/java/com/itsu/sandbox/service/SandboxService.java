@@ -323,7 +323,10 @@ public class SandboxService {
 
     private Process runCommand(String... command) {
         try {
-            return new ProcessBuilder(command).redirectErrorStream(true).start();
+            return new ProcessBuilder(command)
+                    .redirectErrorStream(true)
+                    .redirectInput(ProcessBuilder.Redirect.DISCARD)
+                    .start();
         } catch (IOException e) {
             throw new SandboxException("COMMAND_FAILED", "Failed to execute command: " + e.getMessage(), e);
         }
