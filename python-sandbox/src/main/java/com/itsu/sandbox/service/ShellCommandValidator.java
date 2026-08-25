@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -141,6 +142,16 @@ public class ShellCommandValidator {
             Pattern.compile("\\bsocat\\s+TCP:[^:]+:\\d+", Pattern.CASE_INSENSITIVE)
     );
 
+    // ==================== 系统包管理（沙箱内应使用 pip，不应修改系统包） ====================
+
+    private static final List<Pattern> SYSTEM_PACKAGE_PATTERNS = Arrays.asList(
+            Pattern.compile("^\\s*(apt|apt-get)\\s+", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("^\\s*(yum|dnf|rpm|dpkg)\\s+", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("^\\s*(apk)\\s+", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("^\\s*(pacman|yaourt)\\s+", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("^\\s*(brew|snap)\\s+", Pattern.CASE_INSENSITIVE)
+    );
+
     /**
      * 验证shell命令是否安全
      * @param command 待验证的命令
@@ -159,15 +170,21 @@ public class ShellCommandValidator {
                     "Command exceeds maximum length of 2048 characters");
         }
 
-        // 2. 检查基本危险命令
+        // 2. 检查基本危险命令（系统电源管理）
         String[] basicDangerousCommands = {
                 "shutdown", "halt", "reboot", "poweroff"
         };
         for (String cmd : basicDangerousCommands) {
-            java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("^\\s*" + cmd + "\\s", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(trimmedCommand);
-            if (matcher.matches()) {
-                return new CommandValidationResult(false, "DANGEROUS_COMMAND",
-                        "System power management commands are not allowed: " + cmd);
+            // 使用 find() 而非 matches()，matches() 要求整个字符串完全匹配正则，
+            // 而 "shutdown -h now" 在 "shutdown\s" 之后还有内容，matches() 永远返回 false
+            Matcher matcher = Pattern.compile(
+                    "^\\s*" + cmd + "(\\s|$)", Pattern.CASE_INSENSITIVE
+            ).matcher(trimmedCommand);
+            if (matcher.find()) {
+                log.warn("Blocked dangerous command (DANGEROUS_COMMAND): {}", trimmedCommand);
+                throw new SecurityException(
+                        "System power management commands are not allowed: " + cmd
+                                + " [VIOLATION: DANGEROUS_COMMAND]");
             }
         }
         
@@ -200,6 +217,8 @@ public class ShellCommandValidator {
                 "Remote code execution via pipe is prohibited");
         checkPatterns(trimmedCommand, PORT_SCAN_PATTERNS, "PORT_SCAN",
                 "Port scanning tools are prohibited");
+        checkPatterns(trimmedCommand, SYSTEM_PACKAGE_PATTERNS, "SYSTEM_PACKAGE",
+                "System package management commands are prohibited, use pip instead");
         
         return new CommandValidationResult(true, null, null);
     }
