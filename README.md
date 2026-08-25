@@ -2,6 +2,8 @@
 
 基于 Docker 容器化技术构建的 Python 隔离运行环境，提供安全的代码沙箱服务。
 
+**核心特性**：使用 docker-java API 直接操作 Docker 守护进程，支持本地和远程 Docker 连接。
+
 ## 项目结构
 
 ```
@@ -77,7 +79,7 @@ with SandboxClient("http://localhost:8080", "your-api-key") as client:
 | **自动清理** | 会话超时自动清理容器 |
 | **容量限制** | 可配置最大活跃容器数量及超限策略 |
 | **启动预热** | 可选择在服务启动时预拉取 Python 镜像 |
-| **远程 Docker** | 支持连接本地或远程 Docker 守护进程 |
+| **远程 Docker** | 支持连接本地或远程 Docker 守护进程（通过 docker-java API） |
 
 ## 安全特性
 
@@ -109,7 +111,11 @@ SANDBOX_MAX_CONTAINERS=5
 SANDBOX_SESSION_TIMEOUT_MILLIS=3600000     # 1 小时超时
 SANDBOX_MAX_CONTAINERS_BEHAVIOR=evict-oldest  # 超过则驱逐最旧
 SANDBOX_PULL_IMAGE_ON_STARTUP=true          # 启动预拉取镜像
-DOCKER_HOST=unix:///var/run/docker.sock     # 本地 Docker
+DOCKER_HOST=                                # 留空自动检测本地 Docker
+# 或连接远程 Docker
+# DOCKER_HOST=tcp://192.168.1.100:2375
+# DOCKER_CERT_PATH=/path/to/certs          # TLS 证书目录
+# DOCKER_TLS_VERIFY=true
 ```
 
 完整配置项、环境变量对照表以及远程 Docker 配置说明请参阅

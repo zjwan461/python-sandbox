@@ -1,5 +1,21 @@
 package com.itsu.sandbox.service;
 
+import com.github.dockerjava.api.DockerClient;
+import com.github.dockerjava.api.async.ResultCallback;
+import com.github.dockerjava.api.command.CreateContainerResponse;
+import com.github.dockerjava.api.command.ExecCreateCmdResponse;
+import com.github.dockerjava.api.command.InspectContainerResponse;
+import com.github.dockerjava.api.command.InspectExecResponse;
+import com.github.dockerjava.api.exception.DockerException;
+import com.github.dockerjava.api.model.Container;
+import com.github.dockerjava.api.model.Frame;
+import com.github.dockerjava.api.model.PullResponseItem;
+import com.github.dockerjava.api.model.StreamType;
+import com.github.dockerjava.core.DefaultDockerClientConfig;
+import com.github.dockerjava.core.DockerClientConfig;
+import com.github.dockerjava.core.DockerClientImpl;
+import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
+import com.github.dockerjava.transport.DockerHttpClient;
 import com.itsu.sandbox.config.SandboxConfig;
 import com.itsu.sandbox.exception.SandboxException;
 import jakarta.annotation.PostConstruct;
@@ -14,9 +30,9 @@ import org.springframework.util.StringUtils;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.Base64;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -25,20 +41,72 @@ public class SandboxService {
 
     private final SandboxConfig config;
     private final Map<String, SandboxSession> sessions = new ConcurrentHashMap<>();
+    private DockerClient dockerClient;
 
     public SandboxService(SandboxConfig config) {
         this.config = config;
     }
 
-    /**
-     * 创建新的沙箱会话和容器
-     */
+    @PostConstruct
+    public void init() {
+        dockerClient = createDockerClient();
+        if (config.isPullImageOnStartup()) {
+            pullImageOnStartup();
+        } else {
+            log.info("pull-image-on-startup is disabled, skip pre-pulling image: {}", config.getImage());
+        }
+    }
+
+    @PreDestroy
+    public void destroy() {
+        if (dockerClient != null) {
+            try {
+                dockerClient.close();
+            } catch (IOException e) {
+                log.warn("Failed to close docker client: {}", e.getMessage());
+            }
+        }
+    }
+
+    private DockerClient createDockerClient() {
+        try {
+            DefaultDockerClientConfig.Builder configBuilder = DefaultDockerClientConfig.createDefaultConfigBuilder();
+
+            if (StringUtils.hasText(config.getDockerHost())) {
+                configBuilder.withDockerHost(config.getDockerHost());
+            }
+            if (StringUtils.hasText(config.getDockerCertPath())) {
+                configBuilder.withDockerCertPath(config.getDockerCertPath());
+            }
+            if (StringUtils.hasText(config.getDockerApiVersion())) {
+                configBuilder.withApiVersion(config.getDockerApiVersion());
+            }
+            configBuilder.withDockerTlsVerify(config.isDockerTlsVerify());
+
+            DockerClientConfig dockerClientConfig = configBuilder.build();
+
+            DockerHttpClient httpClient = new ApacheDockerHttpClient.Builder()
+                    .dockerHost(dockerClientConfig.getDockerHost())
+                    .sslConfig(dockerClientConfig.getSSLConfig())
+                    .build();
+
+            DockerClient client = DockerClientImpl.getInstance(dockerClientConfig, httpClient);
+            client.pingCmd().exec();
+            log.info("Docker client initialized successfully, host: {}", dockerClientConfig.getDockerHost());
+            return client;
+        } catch (Exception e) {
+            throw new SandboxException("DOCKER_CONNECT_ERROR",
+                    "Failed to connect to Docker daemon: " + e.getMessage(), e);
+        }
+    }
+
+    // ==================== 会话管理 ====================
+
     public String createContainer(String sessionId) {
         if (sessions.containsKey(sessionId)) {
             throw new SandboxException("DUPLICATE_SESSION", "Session already exists: " + sessionId);
         }
 
-        // 检查并处理最大容器数量限制
         String behavior = config.getMaxContainersBehavior();
         if ("evict-oldest".equals(behavior)) {
             evictOldestSessionIfNecessary();
@@ -56,46 +124,80 @@ public class SandboxService {
         String containerName = config.getContainerNamePrefix() + sessionId;
         cleanupContainer(containerName);
 
-        Process createProcess = runCommand("docker", "create",
-                "--name", containerName,
-                "-e", "PYTHONUNBUFFERED=1", "-t", "-i", config.getImage());
+        try {
+            CreateContainerResponse response = dockerClient.createContainerCmd(config.getImage())
+                    .withName(containerName)
+                    .withEnv("PYTHONUNBUFFERED=1")
+                    .withTty(true)
+                    .withAttachStdin(true)
+                    .withAttachStdout(true)
+                    .withAttachStderr(true)
+                    .exec();
 
-        checkExitCode(createProcess, "Failed to create container");
-        String containerId = readStdout(createProcess).trim();
+            String containerId = response.getId();
+            dockerClient.startContainerCmd(containerId).exec();
 
-        Process startProcess = runCommand("docker", "start", containerId);
-        checkExitCode(startProcess, "Failed to start container");
+            SandboxSession session = new SandboxSession(sessionId, containerId, containerName, Instant.now());
+            sessions.put(sessionId, session);
 
-        SandboxSession session = new SandboxSession(sessionId, containerId, containerName, Instant.now());
-        sessions.put(sessionId, session);
-
-        log.info("Created and started sandbox container: {} ({})", containerName,
-                containerId.substring(0, Math.min(12, containerId.length())));
-        return containerId;
+            log.info("Created and started sandbox container: {} ({})", containerName,
+                    containerId.substring(0, Math.min(12, containerId.length())));
+            return containerId;
+        } catch (DockerException e) {
+            throw new SandboxException("DOCKER_ERROR", "Failed to create container: " + e.getLocalizedMessage(), e);
+        }
     }
 
     public CommandResult execInContainer(String sessionId, String... command) {
         SandboxSession session = getSession(sessionId);
-        Process process = runCommand("docker", "exec", session.containerId, "sh", "-c", String.join(" ", command));
-        int exitCode = waitForOutput(process);
-        return new CommandResult(exitCode, readStdout(process), readStderr(process));
+        try {
+            ExecCreateCmdResponse execCreate = dockerClient.execCreateCmd(session.containerId)
+                    .withCmd(command)
+                    .withAttachStdout(true)
+                    .withAttachStderr(true)
+                    .exec();
+
+            String execId = execCreate.getId();
+
+            ByteArrayOutputStream stdoutStream = new ByteArrayOutputStream();
+            ByteArrayOutputStream stderrStream = new ByteArrayOutputStream();
+
+            ResultCallback.Adapter<Frame> callback = dockerClient.execStartCmd(execId)
+                    .exec(new ExecOutputCallback(stdoutStream, stderrStream));
+            callback.awaitCompletion(300, TimeUnit.SECONDS);
+
+            int exitCode = 0;
+            try {
+                InspectExecResponse inspectResponse = dockerClient.inspectExecCmd(execId).exec();
+                if (inspectResponse.getExitCodeLong() != null) {
+                    exitCode = inspectResponse.getExitCodeLong().intValue();
+                }
+            } catch (Exception e) {
+                log.warn("Failed to get exit code: {}", e.getMessage());
+            }
+
+            return new CommandResult(exitCode,
+                    stdoutStream.toString(StandardCharsets.UTF_8),
+                    stderrStream.toString(StandardCharsets.UTF_8));
+        } catch (DockerException e) {
+            throw new SandboxException("DOCKER_ERROR", "Failed to exec command: " + e.getLocalizedMessage(), e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new SandboxException("INTERRUPTED", "Command interrupted", e);
+        }
     }
 
     public CommandResult runPythonCode(String sessionId, String code) {
         SandboxSession session = getSession(sessionId);
         String tmpFile = "/tmp/sandbox_" + System.currentTimeMillis() + ".py";
 
-        // 使用 base64 编码避免管道和转义问题
-        String encoded = Base64.getEncoder().encodeToString(code.getBytes(StandardCharsets.UTF_8));
-        Process writeProcess = runCommand("docker", "exec", session.containerId,
-                "sh", "-c", "echo \"" + encoded + "\" | base64 -d > " + tmpFile);
-        checkExitCode(writeProcess, "Failed to write Python code");
+        writeFile(sessionId, tmpFile, code);
 
         try {
             return execInContainer(sessionId, "python", tmpFile);
         } finally {
             try {
-                execInContainer(sessionId, "sh", "-c", "rm -f " + tmpFile);
+                execInContainer(sessionId, "rm", "-f", tmpFile);
             } catch (Exception e) {
                 log.warn("Cleanup failed: {}", e.getMessage());
             }
@@ -116,116 +218,112 @@ public class SandboxService {
 
     public void writeFile(String sessionId, String containerPath, String content) {
         SandboxSession session = getSession(sessionId);
-        // 使用 base64 编码避免管道和转义问题
-        String encoded = Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8));
-        Process writeProcess = runCommand("docker", "exec", session.containerId,
-                "sh", "-c", "echo \"" + encoded + "\" | base64 -d > " + containerPath);
-        checkExitCode(writeProcess, "Failed to write file");
+        try {
+            byte[] contentBytes = content.getBytes(StandardCharsets.UTF_8);
+            String tmpFile = writeToTempFile(contentBytes);
+            String dir = extractDirectoryPath(containerPath);
+            String fileName = extractFileName(containerPath);
+            String tmpFileName = extractFileName(tmpFile);
+
+            dockerClient.copyArchiveToContainerCmd(session.containerId)
+                    .withHostResource(tmpFile)
+                    .withRemotePath(dir)
+                    .exec();
+
+            new File(tmpFile).delete();
+
+            if (!tmpFileName.equals(fileName)) {
+                execInContainer(sessionId, "sh", "-c",
+                        "mv '" + dir + "/" + tmpFileName + "' '" + containerPath + "'");
+            }
+        } catch (IOException e) {
+            throw new SandboxException("FILE_WRITE_ERROR", "Failed to write file: " + e.getMessage(), e);
+        } catch (DockerException e) {
+            throw new SandboxException("DOCKER_ERROR", "Failed to write file: " + e.getLocalizedMessage(), e);
+        }
     }
 
     public String readFile(String sessionId, String containerPath) {
-        SandboxSession session = getSession(sessionId);
-        Process catProcess = runCommand("docker", "exec", session.containerId, "cat", containerPath);
-        checkExitCode(catProcess, "Failed to read file: " + containerPath);
-        return readStdout(catProcess);
+        byte[] content = downloadFile(sessionId, containerPath);
+        return new String(content, StandardCharsets.UTF_8);
     }
 
     public byte[] downloadFile(String sessionId, String containerPath) {
         SandboxSession session = getSession(sessionId);
-        // 使用 docker exec cat 代替 docker cp，避免 redirectErrorStream(true) 导致 stderr 被合并到 stdout
-        // 使得 checkExitCode 中 readStderr 无法正确读取错误信息
-        Process catProcess = runCommand("docker", "exec", session.containerId, "cat", containerPath);
-        checkExitCode(catProcess, "Failed to read file: " + containerPath);
-
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try (InputStream is = catProcess.getInputStream()) {
-            is.transferTo(baos);
+        try {
+            try (InputStream is = dockerClient.copyArchiveFromContainerCmd(session.containerId, containerPath).exec()) {
+                return readTarEntry(is);
+            }
+        } catch (DockerException e) {
+            throw new SandboxException("DOCKER_ERROR",
+                    "Failed to read file: " + e.getLocalizedMessage(), e);
         } catch (IOException e) {
             throw new SandboxException("FILE_READ_ERROR", "Failed to read file: " + e.getMessage(), e);
         }
-        return baos.toByteArray();
     }
 
     public String uploadFile(String sessionId, String containerPath, byte[] content, String originalFileName) {
         SandboxSession session = getSession(sessionId);
 
-        // 确定容器中实际的文件路径
-        // 逻辑：
-        // - 如果 path 以 / 结尾，视为目录，拼接文件名
-        // - 如果 path 不以 / 结尾，且有扩展名（含 .），视为完整文件路径
-        // - 其他情况视为目录，拼接文件名
         String actualContainerPath;
-        String fileExtension = originalFileName.contains(".")
-                ? originalFileName.substring(originalFileName.lastIndexOf('.'))
-                : "";
-        
         if (containerPath.endsWith("/")) {
-            // path 以 / 结尾，明确是目录
             actualContainerPath = containerPath + originalFileName;
         } else if (containerPath.contains(".")) {
-            // path 包含扩展名，视为完整文件路径
             actualContainerPath = containerPath;
         } else {
-            // 没有扩展名，视为目录
             actualContainerPath = containerPath + "/" + originalFileName;
         }
 
-        // 构造宿主机临时文件路径
-        String tmpHostFile = "/tmp/upload_" + System.currentTimeMillis() + fileExtension;
-        try (FileOutputStream fos = new FileOutputStream(tmpHostFile)) {
-            fos.write(content);
+        try {
+            String dir = extractDirectoryPath(actualContainerPath);
+            String tmpFile = writeToTempFile(content);
+
+            dockerClient.copyArchiveToContainerCmd(session.containerId)
+                    .withHostResource(tmpFile)
+                    .withRemotePath(dir)
+                    .exec();
+
+            new File(tmpFile).delete();
+
+            String fileName = extractFileName(actualContainerPath);
+            String tmpFileName = extractFileName(tmpFile);
+            if (!tmpFileName.equals(fileName)) {
+                execInContainer(sessionId, "sh", "-c",
+                        "mv '" + dir + "/" + tmpFileName + "' '" + actualContainerPath + "'");
+            }
+            return actualContainerPath;
         } catch (IOException e) {
-            throw new SandboxException("FILE_WRITE_ERROR", "Failed to save uploaded file: " + e.getMessage(), e);
+            throw new SandboxException("FILE_WRITE_ERROR", "Failed to upload file: " + e.getMessage(), e);
+        } catch (DockerException e) {
+            throw new SandboxException("DOCKER_ERROR", "Failed to upload file: " + e.getLocalizedMessage(), e);
         }
-        Process cpProcess = runCommand("docker", "cp", tmpHostFile, session.containerId + ":" + actualContainerPath);
-        checkExitCode(cpProcess, "Failed to upload file");
-        new File(tmpHostFile).delete();
-        
-        // 返回上传到容器中的实际文件路径
-        return actualContainerPath;
     }
 
     public void removeContainer(String sessionId) {
         SandboxSession session = sessions.remove(sessionId);
-        if (session == null)
-            return;
+        if (session == null) return;
         try {
-            runCommand("docker", "kill", session.containerId).waitFor();
+            dockerClient.killContainerCmd(session.containerId).exec();
         } catch (Exception e) {
             log.warn("Kill failed: {}", e.getMessage());
         }
         try {
-            runCommand("docker", "rm", "-f", session.containerId).waitFor();
+            dockerClient.removeContainerCmd(session.containerId).withForce(true).exec();
             log.info("Removed container: {}", session.name);
         } catch (Exception e) {
             log.error("Remove failed: {}", e.getMessage());
         }
     }
 
-    /**
-     * Bean 启动钩子：根据配置预拉取 Python 镜像，避免首次创建会话时的拉取延迟。
-     * 仅在 sandbox.pull-image-on-startup=true 时启用。
-     */
-    @PostConstruct
-    public void pullImageOnStartup() {
-        if (!config.isPullImageOnStartup()) {
-            log.info("pull-image-on-startup is disabled, skip pre-pulling image: {}", config.getImage());
-            return;
-        }
+    private void pullImageOnStartup() {
         String image = config.getImage();
         log.info("Pre-pulling sandbox image on startup: {}", image);
         try {
-            Process pullProcess = runCommand("docker", "pull", image);
-            int exitCode = waitForOutput(pullProcess);
-            String output = readStdout(pullProcess);
-            if (exitCode != 0) {
-                log.error("Failed to pre-pull image {} (exitCode={}): {}", image, exitCode, output);
-                return;
-            }
-            log.info("Successfully pre-pulled image: {} | output: {}", image,
-                    output.isEmpty() ? "(no output)" : output.replace("\n", " ").trim());
+            dockerClient.pullImageCmd(image)
+                    .exec(new ResultCallback.Adapter<PullResponseItem>() {})
+                    .awaitCompletion();
+            log.info("Successfully pre-pulled image: {}", image);
         } catch (Exception e) {
-            // 预拉取失败不应阻止应用启动，首次创建会话时仍会触发拉取
             log.error("Exception while pre-pulling image {}: {}", image, e.getMessage(), e);
         }
     }
@@ -233,36 +331,25 @@ public class SandboxService {
     @PreDestroy
     public void stopAndRemoveAllContainers() {
         log.info("Cleaning up all sandbox containers...");
-
-        // 首先停止所有 python-sandbox_* 前缀的 Docker 容器
         try {
-            Process ps = runCommand("docker", "ps", "-q", "--filter", "name=python-sandbox-");
-            String containerIds = readStdout(ps).trim();
-            if (!containerIds.isEmpty()) {
-                for (String containerId : containerIds.split("\n")) {
-                    containerId = containerId.trim();
-                    if (!containerId.isEmpty()) {
-                        log.info("Stopping container: {}", containerId);
-                        try {
-                            runCommand("docker", "stop", containerId).waitFor();
-                        } catch (Exception e) {
-                            log.warn("Failed to stop container {}: {}", containerId, e.getMessage());
-                        }
-                    }
+            List<Container> containers = dockerClient.listContainersCmd()
+                    .withShowAll(true)
+                    .withNameFilter(List.of(config.getContainerNamePrefix()))
+                    .exec();
+            for (Container container : containers) {
+                try {
+                    dockerClient.stopContainerCmd(container.getId()).withTimeout(5).exec();
+                } catch (Exception e) {
+                    log.warn("Failed to stop container {}: {}", container.getId(), e.getMessage());
                 }
             }
         } catch (Exception e) {
-            log.warn("Failed to stop docker containers: {}", e.getMessage());
+            log.warn("Failed to list containers: {}", e.getMessage());
         }
-
-        // 同时清理本服务进程创建的会话
         sessions.keySet().forEach(this::removeContainer);
         sessions.clear();
     }
 
-    /**
-     * 定期检查并清理超时会话（默认每小时执行）
-     */
     @Scheduled(fixedRateString = "${sandbox.session-cleanup-interval-millis:3600000}")
     public void cleanUpExpiredSessions() {
         Instant now = Instant.now();
@@ -273,8 +360,8 @@ public class SandboxService {
             if (now.isAfter(expireTime)) {
                 log.info("Removing expired session: {} (timeout: {}ms)", entry.getKey(), timeoutMillis);
                 try {
-                    runCommand("docker", "kill", session.containerId).waitFor();
-                    runCommand("docker", "rm", "-f", session.containerId).waitFor();
+                    dockerClient.killContainerCmd(session.containerId).exec();
+                    dockerClient.removeContainerCmd(session.containerId).withForce(true).exec();
                     log.info("Cleaned up expired container: {}", session.name);
                 } catch (Exception e) {
                     log.error("Failed to cleanup expired container {}: {}", session.name, e.getMessage());
@@ -287,11 +374,10 @@ public class SandboxService {
 
     public boolean isActive(String sessionId) {
         SandboxSession session = sessions.get(sessionId);
-        if (session == null)
-            return false;
+        if (session == null) return false;
         try {
-            Process ps = runCommand("docker", "inspect", "-f", "{{.State.Running}}", session.containerId);
-            return "true".equals(readStdout(ps).trim());
+            InspectContainerResponse inspect = dockerClient.inspectContainerCmd(session.containerId).exec();
+            return Boolean.TRUE.equals(inspect.getState().getRunning());
         } catch (Exception e) {
             sessions.remove(sessionId);
             return false;
@@ -321,79 +407,32 @@ public class SandboxService {
         return session;
     }
 
-    private Process runCommand(String... command) {
-        try {
-            Process process = new ProcessBuilder(command).start();
-            // 关闭 stdin 防止 cat 等命令等待输入而卡住
-            process.getOutputStream().close();
-            return process;
-        } catch (IOException e) {
-            throw new SandboxException("COMMAND_FAILED", "Failed to execute command: " + e.getMessage(), e);
-        }
-    }
-    private void checkExitCode(Process process, String errorMsg) {
-        try {
-            int exitCode = process.waitFor();
-            if (exitCode != 0) {
-                throw new SandboxException("DOCKER_ERROR", errorMsg + ": " + readStderr(process), null);
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new SandboxException("INTERRUPTED", "Command interrupted", e);
-        }
-    }
-
-    private int waitForOutput(Process process) {
-        try {
-            return process.waitFor();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new SandboxException("INTERRUPTED", "Command interrupted", e);
-        }
-    }
-
-    private String readStdout(Process process) {
-        try (InputStream is = process.getInputStream()) {
-            return new String(is.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            return "";
-        }
-    }
-
-    private String readStderr(Process process) {
-        try (InputStream is = process.getErrorStream()) {
-            return new String(is.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            return "";
-        }
-    }
-
     private void cleanupContainer(String name) {
         try {
-            Process ps = runCommand("docker", "ps", "-a", "--filter", "name=" + name, "--format", "{{.ID}}");
-            String output = readStdout(ps).trim();
-            if (!output.isEmpty()) {
-                runCommand("docker", "kill", output).waitFor();
-                runCommand("docker", "rm", "-f", output).waitFor();
-                log.info("Cleaned up existing container: {}", name);
+            List<Container> containers = dockerClient.listContainersCmd()
+                    .withShowAll(true)
+                    .withNameFilter(List.of("/" + name))
+                    .exec();
+            for (Container container : containers) {
+                try {
+                    dockerClient.killContainerCmd(container.getId()).exec();
+                } catch (Exception ignored) {}
+                try {
+                    dockerClient.removeContainerCmd(container.getId()).withForce(true).exec();
+                    log.info("Cleaned up existing container: {}", name);
+                } catch (Exception e) {
+                    log.warn("Error cleaning up container {}: {}", name, e.getMessage());
+                }
             }
         } catch (Exception e) {
             log.warn("Error cleaning up container {}: {}", name, e.getMessage());
         }
     }
 
-    /**
-     * 如果超过最大容器数量，删除最早创建的会话并清理其容器
-     */
     private void evictOldestSessionIfNecessary() {
-        if (sessions.size() < config.getMaxContainers()) {
-            return; // 未达到限制，无需清理
-        }
-
-        // 找到最早创建的会话（通过 lastActivity 判断）
+        if (sessions.size() < config.getMaxContainers()) return;
         String oldestSessionId = null;
         Instant oldestActivity = null;
-
         for (Map.Entry<String, SandboxSession> entry : sessions.entrySet()) {
             Instant activityTime = entry.getValue().getLastActivity();
             if (oldestActivity == null || activityTime.isBefore(oldestActivity)) {
@@ -401,11 +440,46 @@ public class SandboxService {
                 oldestSessionId = entry.getKey();
             }
         }
-
         if (oldestSessionId != null) {
             log.info("Evicting oldest session: {} (last active: {})", oldestSessionId, oldestActivity);
             removeContainer(oldestSessionId);
         }
+    }
+
+    private String writeToTempFile(byte[] content) throws IOException {
+        File tmp = File.createTempFile("sandbox_upload_", ".tmp");
+        try (FileOutputStream fos = new FileOutputStream(tmp)) {
+            fos.write(content);
+        }
+        return tmp.getAbsolutePath();
+    }
+
+    private String extractDirectoryPath(String path) {
+        int lastSlash = path.lastIndexOf('/');
+        return lastSlash > 0 ? path.substring(0, lastSlash) : "/";
+    }
+
+    private String extractFileName(String path) {
+        int lastSlash = path.lastIndexOf('/');
+        return lastSlash >= 0 ? path.substring(lastSlash + 1) : path;
+    }
+
+    private byte[] readTarEntry(InputStream tarStream) throws IOException {
+        byte[] header = new byte[512];
+        int headerRead = tarStream.read(header);
+        if (headerRead < 512) {
+            throw new IOException("Invalid tar stream");
+        }
+        String sizeStr = new String(header, 124, 12, StandardCharsets.UTF_8).trim();
+        long size = Long.parseLong(sizeStr, 8);
+        byte[] content = new byte[(int) size];
+        int offset = 0;
+        while (offset < size) {
+            int read = tarStream.read(content, offset, (int) size - offset);
+            if (read < 0) break;
+            offset += read;
+        }
+        return content;
     }
 
     // ==================== Data classes ====================
@@ -421,25 +495,11 @@ public class SandboxService {
             this.stderr = stderr;
         }
 
-        public int getExitCode() {
-            return exitCode;
-        }
-
-        public String getStdout() {
-            return stdout;
-        }
-
-        public String getStderr() {
-            return stderr;
-        }
-
-        public boolean isSuccess() {
-            return exitCode == 0;
-        }
-
-        public String getCombinedOutput() {
-            return stdout + (stderr.isEmpty() ? "" : "\n" + stderr);
-        }
+        public int getExitCode() { return exitCode; }
+        public String getStdout() { return stdout; }
+        public String getStderr() { return stderr; }
+        public boolean isSuccess() { return exitCode == 0; }
+        public String getCombinedOutput() { return stdout + (stderr.isEmpty() ? "" : "\n" + stderr); }
     }
 
     @Data
@@ -454,6 +514,32 @@ public class SandboxService {
             this.containerId = containerId;
             this.name = name;
             this.lastActivity = lastActivity;
+        }
+    }
+
+    // ==================== Docker exec output callback ====================
+
+    private static class ExecOutputCallback extends ResultCallback.Adapter<Frame> {
+        private final OutputStream stdout;
+        private final OutputStream stderr;
+
+        public ExecOutputCallback(OutputStream stdout, OutputStream stderr) {
+            this.stdout = stdout;
+            this.stderr = stderr;
+        }
+
+        @Override
+        public void onNext(Frame frame) {
+            try {
+                StreamType streamType = frame.getStreamType();
+                if (streamType == StreamType.STDOUT) {
+                    stdout.write(frame.getPayload());
+                } else if (streamType == StreamType.STDERR) {
+                    stderr.write(frame.getPayload());
+                }
+            } catch (IOException e) {
+                log.warn("Failed to write exec output: {}", e.getMessage());
+            }
         }
     }
 }

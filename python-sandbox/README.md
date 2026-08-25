@@ -18,7 +18,7 @@
 
 - Java 17
 - Spring Boot 3.2.0
-- Docker (通过 docker CLI 管理)
+- Docker Java API (docker-java 3.3.4)
 - python:3.12-trixie (沙箱基础镜像)
 
 ## 快速开始
@@ -64,7 +64,10 @@ curl http://localhost:8080/health
 | `SANDBOX_MAX_CONTAINERS` | `sandbox.max-containers` | `10` | 最大活跃沙箱容器数 |
 | `SANDBOX_MAX_CONTAINERS_BEHAVIOR` | `sandbox.max-containers-behavior` | `reject` | 超限策略：`reject` / `evict-oldest` |
 | `SANDBOX_PULL_IMAGE_ON_STARTUP` | `sandbox.pull-image-on-startup` | `false` | 是否在服务启动时预拉取镜像 |
-| `DOCKER_HOST` | — | `unix:///var/run/docker.sock` | Docker 守护进程连接地址 |
+| `DOCKER_HOST` | `sandbox.docker-host` | 留空（自动检测） | Docker 守护进程连接地址 |
+| `DOCKER_CERT_PATH` | `sandbox.docker-cert-path` | 留空 | TLS 证书目录路径 |
+| `DOCKER_TLS_VERIFY` | `sandbox.docker-tls-verify` | `false` | 是否启用 TLS 验证 |
+| `DOCKER_API_VERSION` | `sandbox.docker-api-version` | 留空（使用默认） | Docker API 版本号 |
 
 ### 启动预拉取镜像（`SANDBOX_PULL_IMAGE_ON_STARTUP`）
 
@@ -77,22 +80,200 @@ curl http://localhost:8080/health
 
 ### Docker 连接方式（`DOCKER_HOST`）
 
-默认通过 unix socket 挂载宿主机 Docker：
+系统使用 **docker-java API** 直接操作 Docker 守护进程，支持本地和远程连接。
+
+#### 本地 Docker（默认）
+
+`DOCKER_HOST` 留空时自动检测本地 Docker socket，也可明确指定：
 
 ```env
+DOCKER_HOST=
+# 或明确指定
 DOCKER_HOST=unix:///var/run/docker.sock
 ```
 
-如需连接远程 Docker（如 Docker-in-Docker、独立 Docker 主机）：
+> docker-compose 部署时需要挂载宿主机 socket：
+> ```yaml
+> volumes:
+>   - /var/run/docker.sock:/var/run/docker.sock
+> ```
+
+#### 远程 Docker（TCP，无加密）
+
+> ⚠️ 仅适用于内网环境，Docker API 无认证，任何能访问该端口的人都可以控制 Docker 主机。
+
+**1. 服务端配置（`.env`）**：
 
 ```env
-# 普通远程
-DOCKER_HOST=tcp://docker-host:2375
-# TLS 加密
-DOCKER_HOST=tcp://docker-host:2376
+DOCKER_HOST=tcp://192.168.1.100:2375
 ```
 
-⚠️ 切换为远程 Docker 时，请同时在 `docker-compose.yml` 中注释/删除 `/var/run/docker.sock` 的挂载行，并确保远程 Docker 守护进程已开启远程 API 监听。
+**2. 远程 Docker 主机配置**：
+
+编辑远程主机上的 `/etc/docker/daemon.json`：
+
+```json
+{
+  "hosts": ["unix:///var/run/docker.sock", "tcp://0.0.0.0:2375"]
+}
+```
+
+重启 Docker 服务：
+
+```bash
+sudo systemctl restart docker
+```
+
+**3. docker-compose.yml 调整**：
+
+注释或删除本地 socket 挂载：
+
+```yaml
+services:
+  python-sandbox:
+    # volumes:
+    #   - /var/run/docker.sock:/var/run/docker.sock   # 注释掉
+    environment:
+      - DOCKER_HOST=tcp://192.168.1.100:2375
+```
+
+#### 远程 Docker（TLS 加密，推荐生产环境）
+
+**1. 生成 TLS 证书**：
+
+在远程 Docker 主机上执行以下脚本生成 CA 和客户端证书：
+
+```bash
+#!/bin/bash
+# === 配置变量 ===
+SERVER_IP="192.168.1.100"    # 远程 Docker 主机 IP
+CERT_DIR="./docker-certs"    # 证书输出目录
+
+mkdir -p "$CERT_DIR"
+
+# 生成 CA 密钥和证书
+openssl genrsa -out "$CERT_DIR/ca-key.pem" 4096
+openssl req -x509 -new -nodes -key "$CERT_DIR/ca-key.pem" \
+  -days 3650 -out "$CERT_DIR/ca.pem" \
+  -subj "/CN=docker-ca"
+
+# 生成服务端密钥和证书
+openssl genrsa -out "$CERT_DIR/server-key.pem" 4096
+
+cat > "$CERT_DIR/server-ext.cnf" << EOF
+subjectAltName = IP:${SERVER_IP},IP:127.0.0.1
+EOF
+
+openssl req -new -key "$CERT_DIR/server-key.pem" \
+  -out "$CERT_DIR/server.csr" \
+  -subj "/CN=docker-server"
+
+openssl x509 -req -in "$CERT_DIR/server.csr" \
+  -CA "$CERT_DIR/ca.pem" -CAkey "$CERT_DIR/ca-key.pem" \
+  -CAcreateserial -out "$CERT_DIR/server-cert.pem" \
+  -days 3650 -extfile "$CERT_DIR/server-ext.cnf"
+
+# 生成客户端密钥和证书
+openssl genrsa -out "$CERT_DIR/client-key.pem" 4096
+
+cat > "$CERT_DIR/client-ext.cnf" << EOF
+extendedKeyUsage = clientAuth
+EOF
+
+openssl req -new -key "$CERT_DIR/client-key.pem" \
+  -out "$CERT_DIR/client.csr" \
+  -subj "/CN=docker-client"
+
+openssl x509 -req -in "$CERT_DIR/client.csr" \
+  -CA "$CERT_DIR/ca.pem" -CAkey "$CERT_DIR/ca-key.pem" \
+  -CAcreateserial -out "$CERT_DIR/client-cert.pem" \
+  -days 3650 -extfile "$CERT_DIR/client-ext.cnf"
+
+# 清理中间文件
+rm -f "$CERT_DIR"/*.csr "$CERT_DIR"/*.cnf "$CERT_DIR"/*.srl
+
+echo "证书生成完毕，目录: $CERT_DIR"
+```
+
+**2. 配置远程 Docker 主机**：
+
+将服务端证书复制到 Docker 配置目录：
+
+```bash
+sudo cp server-cert.pem server-key.pem ca.pem /etc/docker/
+```
+
+编辑 `/etc/docker/daemon.json`：
+
+```json
+{
+  "hosts": ["unix:///var/run/docker.sock", "tcp://0.0.0.0:2376"],
+  "tls": true,
+  "tlscacert": "/etc/docker/ca.pem",
+  "tlscert": "/etc/docker/server-cert.pem",
+  "tlskey": "/etc/docker/server-key.pem",
+  "tlsverify": true
+}
+```
+
+重启 Docker 服务：
+
+```bash
+sudo systemctl restart docker
+```
+
+**3. 服务端配置（`.env`）**：
+
+将客户端证书（`ca.pem`、`client-cert.pem`、`client-key.pem`）放到服务端可访问的目录，然后配置：
+
+```env
+DOCKER_HOST=tcp://192.168.1.100:2376
+DOCKER_CERT_PATH=/path/to/client-certs    # 包含 ca.pem、cert.pem（即 client-cert.pem）、key.pem（即 client-key.pem）
+DOCKER_TLS_VERIFY=true
+```
+
+> ⚠️ `DOCKER_CERT_PATH` 目录下的三个文件必须命名为：
+> - `ca.pem` — CA 证书
+> - `cert.pem` — 客户端证书（即生成的 `client-cert.pem`）
+> - `key.pem` — 客户端私钥（即生成的 `client-key.pem`）
+
+**4. docker-compose.yml 调整**：
+
+```yaml
+services:
+  python-sandbox:
+    # volumes:
+    #   - /var/run/docker.sock:/var/run/docker.sock   # 注释掉
+    volumes:
+      - ./docker-certs:/app/certs:ro                   # 挂载客户端证书（只读）
+    environment:
+      - DOCKER_HOST=tcp://192.168.1.100:2376
+      - DOCKER_CERT_PATH=/app/certs
+      - DOCKER_TLS_VERIFY=true
+```
+
+#### 连接验证
+
+配置完成后，启动服务并访问健康检查接口验证连接：
+
+```bash
+curl http://localhost:8080/health
+```
+
+成功响应示例：
+
+```json
+{
+  "status": "UP",
+  "activeContainers": 0
+}
+```
+
+如果连接失败，请检查：
+- 远程主机防火墙是否开放了对应端口（2375 或 2376）
+- Docker 守护进程是否正确监听（`ss -tlnp | grep 2375`）
+- TLS 证书是否正确且未过期
+- 服务端日志中的具体错误信息
 
 ## API 文档
 

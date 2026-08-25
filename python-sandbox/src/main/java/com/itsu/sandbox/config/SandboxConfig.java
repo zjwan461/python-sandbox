@@ -35,4 +35,34 @@ public class SandboxConfig {
      * false - 不预拉取，延迟到首次创建会话时再拉取
      */
     private boolean pullImageOnStartup = false;
+
+    // ==================== Docker 连接配置 ====================
+
+    /**
+     * Docker 守护进程连接地址。
+     * 留空时自动检测（优先本地 socket，其次 DOCKER_HOST 环境变量）。
+     * 示例：
+     *   - 本地 socket: unix:///var/run/docker.sock
+     *   - TCP 连接: tcp://192.168.1.100:2375
+     *   - TLS 连接: tcp://192.168.1.100:2376
+     */
+    private String dockerHost = "unix:///var/run/docker.sock";
+
+    /**
+     * TLS 证书目录路径（启用 TLS 时必填）。
+     * 目录下应包含 ca.pem、cert.pem、key.pem 三个文件。
+     */
+    private String dockerCertPath = "";
+
+    /**
+     * 是否启用 TLS 验证（默认 false）。
+     * 当 dockerHost 使用 tcp:// 且端口为 2376 时建议开启。
+     */
+    private boolean dockerTlsVerify = false;
+
+    /**
+     * Docker API 版本号。留空使用默认版本。
+     * 示例：1.43
+     */
+    private String dockerApiVersion = "";
 }
