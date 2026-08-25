@@ -7,7 +7,6 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 
 /**
  * Python Sandbox Java SDK
@@ -47,7 +46,8 @@ public class SandboxClient {
      * @return 会话 ID
      */
     public String createSession() throws Exception {
-        return postJson("/api/sandbox/session", "{}", String.class);
+        java.util.Map<String, Object> response = postJson("/api/sandbox/session", "{}", java.util.Map.class);
+        return (String) response.get("sessionId");
     }
 
     /**
@@ -56,7 +56,7 @@ public class SandboxClient {
      * @param sessionId 会话 ID
      */
     public void deleteSession(String sessionId) throws Exception {
-        putJson(String.format("/api/sandbox/session/%s", sessionId), "{}");
+        delete(String.format("/api/sandbox/session/%s", sessionId));
     }
 
     // ==================== 代码执行 ====================
@@ -122,7 +122,8 @@ public class SandboxClient {
      * @return 安装包列表（文本格式）
      */
     public String pipList(String sessionId) throws Exception {
-        return get(String.format("/api/sandbox/pip/list?sessionId=%s", sessionId));
+        java.util.Map<String, Object> response = getJson(String.format("/api/sandbox/pip/list?sessionId=%s", sessionId), java.util.Map.class);
+        return (String) response.get("packages");
     }
 
     // ==================== 文件操作 ====================
@@ -150,8 +151,9 @@ public class SandboxClient {
      * @return 文件内容字符串
      */
     public String readFile(String sessionId, String containerPath) throws Exception {
-        return get(String.format("/api/sandbox/file/read?sessionId=%s&path=%s",
-                sessionId, containerPath));
+        java.util.Map<String, Object> response = getJson(String.format("/api/sandbox/file/read?sessionId=%s&path=%s",
+                sessionId, containerPath), java.util.Map.class);
+        return (String) response.get("content");
     }
 
     /**
@@ -162,17 +164,60 @@ public class SandboxClient {
      * @param data          文件字节数据
      */
     public void uploadFile(String sessionId, String containerPath, byte[] data) throws Exception {
-        // 构造 multipart 请求较为复杂，这里通过简单 POST JSON + Base64 编码处理小文件
         if (data == null) throw new IllegalArgumentException("File data cannot be null");
         
-        String encoded = Base64.getEncoder().encodeToString(data);
-        String json = String.format(
-                "{\"sessionId\":\"%s\",\"path\":%s,\"content\":\"%s\"}",
-                sessionId, objectMapper.writeValueAsString(containerPath),
-                encoded.replace("\"", "\\\""));
+        // 构造 multipart/form-data 请求
+        String boundary = "----SandboxSDKBoundary" + System.currentTimeMillis();
+        URL url = new URL(baseUrl + "/api/sandbox/file/upload");
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("X-Api-Key", apiKey);
+        conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+        conn.setConnectTimeout(10000);
+        conn.setReadTimeout(60000);
+        conn.setDoOutput(true);
         
-        // 注意：对于大文件请使用 uploadStream 方法
-        postJson("/api/sandbox/file/upload", json, Void.class);
+        try (OutputStream os = conn.getOutputStream();
+             PrintWriter writer = new PrintWriter(new OutputStreamWriter(os, StandardCharsets.UTF_8), true)) {
+            
+            // sessionId 字段
+            writer.append("--").append(boundary).append("\r\n");
+            writer.append("Content-Disposition: form-data; name=\"sessionId\"\r\n\r\n");
+            writer.append(sessionId).append("\r\n");
+            writer.flush();
+            
+            // path 字段
+            writer.append("--").append(boundary).append("\r\n");
+            writer.append("Content-Disposition: form-data; name=\"path\"\r\n\r\n");
+            writer.append(containerPath).append("\r\n");
+            writer.flush();
+            
+            // file 字段
+            String fileName = containerPath.substring(containerPath.lastIndexOf('/') + 1);
+            writer.append("--").append(boundary).append("\r\n");
+            writer.append("Content-Disposition: form-data; name=\"file\"; filename=\"").append(fileName).append("\"\r\n");
+            writer.append("Content-Type: application/octet-stream\r\n\r\n");
+            writer.flush();
+            os.write(data);
+            os.flush();
+            writer.append("\r\n");
+            writer.flush();
+            
+            // 结束标记
+            writer.append("--").append(boundary).append("--\r\n");
+            writer.flush();
+        }
+        
+        int status = conn.getResponseCode();
+        if (status < 200 || status >= 300) {
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8))) {
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) sb.append(line);
+                throw new IOException("HTTP " + status + ": " + sb.toString());
+            }
+        }
     }
 
     /**
@@ -183,15 +228,20 @@ public class SandboxClient {
      * @return 文件字节数据
      */
     public byte[] downloadFile(String sessionId, String containerPath) throws Exception {
-        // 简单实现：返回文件的 hex 编码（生产环境建议使用专用端点）
-        String json = String.format(
-                "{\"sessionId\":\"%s\",\"path\":%s}",
-                sessionId, objectMapper.writeValueAsString(containerPath));
-        
-        // 使用原始 HTTP GET 下载
         HttpURLConnection conn = sendRequest("GET",
                 String.format("%s/api/sandbox/file/download?sessionId=%s&path=%s",
                         baseUrl, sessionId, containerPath), null);
+        
+        int status = conn.getResponseCode();
+        if (status < 200 || status >= 300) {
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8))) {
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) sb.append(line);
+                throw new IOException("HTTP " + status + ": " + sb.toString());
+            }
+        }
         
         try (InputStream is = conn.getInputStream()) {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -218,7 +268,6 @@ public class SandboxClient {
 
     // ==================== 内部方法 ====================
 
-    @SuppressWarnings("unchecked")
     private <T> T postJson(String path, String json, Class<T> clazz) throws Exception {
         HttpURLConnection conn = sendRequest("POST", baseUrl + path, json);
         conn.setRequestProperty("Content-Type", "application/json");
@@ -244,19 +293,40 @@ public class SandboxClient {
         }
     }
 
-    private String get(String path) throws Exception {
+    private <T> T getJson(String path, Class<T> clazz) throws Exception {
         HttpURLConnection conn = sendRequest("GET", baseUrl + path, null);
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) sb.append(line);
-            return sb.toString();
+        int status = conn.getResponseCode();
+        if (status >= 200 && status < 300) {
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) sb.append(line);
+                return objectMapper.readValue(sb.toString(), clazz);
+            }
+        } else {
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8))) {
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) sb.append(line);
+                throw new IOException("HTTP " + status + ": " + sb.toString());
+            }
         }
     }
 
-    private void putJson(String path, String json) throws Exception {
-        HttpURLConnection conn = sendRequest("DELETE", baseUrl + path, "{}");
+    private void delete(String path) throws Exception {
+        HttpURLConnection conn = sendRequest("DELETE", baseUrl + path, null);
+        int status = conn.getResponseCode();
+        if (status < 200 || status >= 300) {
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8))) {
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) sb.append(line);
+                throw new IOException("HTTP " + status + ": " + sb.toString());
+            }
+        }
     }
 
     private HttpURLConnection sendRequest(String method, String urlString, String body) throws Exception {

@@ -11,14 +11,13 @@
 
 所有错误都以 ApiRequestError 或 Python 原生异常形式呈现。
 """
-from python_sandbox_sdk import ApiRequestError, SandboxError
+from python_sandbox_sdk import SandboxClient, ApiRequestError, SandboxError
 
-from common import create_client, sandbox_session, print_section
+from common import create_client, sandbox_session, print_section, DEFAULT_BASE_URL
 
 
 def demo_auth_error() -> None:
     print_section("Demo A: 鉴权失败（错误 API Key）")
-    from common import DEFAULT_BASE_URL
     client = SandboxClient(DEFAULT_BASE_URL, "wrong-api-key")
     try:
         client.create_session()

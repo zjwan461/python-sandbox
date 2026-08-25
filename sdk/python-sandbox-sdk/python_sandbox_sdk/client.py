@@ -13,24 +13,9 @@ Python Sandbox SDK
     Hello!
 """
 
-import base64
-import json
-from dataclasses import dataclass
-from typing import Optional
-
 import requests
 
-
-@dataclass
-class _CommandResult:
-    """内部命令结果"""
-    exit_code: int
-    stdout: str
-    stderr: str
-
-    @property
-    def success(self) -> bool:
-        return self.exit_code == 0
+from .dto import CommandResult
 
 
 class SandboxError(Exception):
@@ -101,7 +86,7 @@ class SandboxClient:
     
     # ==================== 代码执行 ====================
     
-    def exec_python(self, session_id: str, code: str) -> _CommandResult:
+    def exec_python(self, session_id: str, code: str) -> CommandResult:
         """
         在沙箱中执行 Python 代码
         
@@ -119,9 +104,9 @@ class SandboxClient:
         )
         self._raise_if_error(resp)
         data = resp.json()
-        return _CommandResult(data["exitCode"], data.get("stdout", ""), data.get("stderr", ""))
+        return CommandResult(data["exitCode"], data.get("stdout", ""), data.get("stderr", ""))
     
-    def exec_shell(self, session_id: str, command: str) -> _CommandResult:
+    def exec_shell(self, session_id: str, command: str) -> CommandResult:
         """
         在沙箱中执行 Shell 命令
         
@@ -139,11 +124,11 @@ class SandboxClient:
         )
         self._raise_if_error(resp)
         data = resp.json()
-        return _CommandResult(data["exitCode"], data.get("stdout", ""), data.get("stderr", ""))
+        return CommandResult(data["exitCode"], data.get("stdout", ""), data.get("stderr", ""))
     
     # ==================== pip 包管理 ====================
     
-    def pip_install(self, session_id: str, package_name: str) -> _CommandResult:
+    def pip_install(self, session_id: str, package_name: str) -> CommandResult:
         """
         安装 Python 包
         
@@ -161,9 +146,9 @@ class SandboxClient:
         )
         self._raise_if_error(resp)
         data = resp.json()
-        return _CommandResult(data["exitCode"], data.get("stdout", ""), data.get("stderr", ""))
+        return CommandResult(data["exitCode"], data.get("stdout", ""), data.get("stderr", ""))
     
-    def pip_uninstall(self, session_id: str, package_name: str) -> _CommandResult:
+    def pip_uninstall(self, session_id: str, package_name: str) -> CommandResult:
         """
         卸载 Python 包
         
@@ -181,7 +166,7 @@ class SandboxClient:
         )
         self._raise_if_error(resp)
         data = resp.json()
-        return _CommandResult(data["exitCode"], data.get("stdout", ""), data.get("stderr", ""))
+        return CommandResult(data["exitCode"], data.get("stdout", ""), data.get("stderr", ""))
     
     def pip_list(self, session_id: str) -> str:
         """
@@ -249,12 +234,13 @@ class SandboxClient:
             container_path: 容器内目标路径
             data: 文件字节数据
         """
-        # 对于大文件，先写到临时文件再上传
         import tempfile
         import os
         
+        # 写入临时文件
         fd, tmp_path = tempfile.mkstemp(prefix="sandbox_upload_")
         try:
+            # os.fdopen 接管了 fd 的所有权，with 块结束时会自动关闭 fd
             with os.fdopen(fd, 'wb') as f:
                 f.write(data)
             
@@ -262,13 +248,16 @@ class SandboxClient:
                 files = {'file': (os.path.basename(container_path), f)}
                 data_params = {'sessionId': session_id, 'path': container_path}
                 
-                # 重新发送 multipart 请求（不带 Content-Type header）
+                # 发送 multipart 请求（requests 会自动设置正确的 Content-Type）
                 url = f"{self.base_url}/api/sandbox/file/upload"
-                resp = self._session.post(url, files=files, data=data_params)
-                self._raise_if_error(resp)
+                # 使用新的 session 避免继承主 session 的 Content-Type: application/json
+                with requests.Session() as upload_session:
+                    upload_session.headers.update({"X-Api-Key": self.api_key})
+                    resp = upload_session.post(url, files=files, data=data_params, timeout=120)
+                    self._raise_if_error(resp)
         finally:
-            os.close(fd)
-            os.unlink(tmp_path)
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
     
     def download_file(self, session_id: str, container_path: str) -> bytes:
         """
@@ -284,7 +273,7 @@ class SandboxClient:
         url = f"{self.base_url}/api/sandbox/file/download"
         params = {"sessionId": session_id, "path": container_path}
         
-        # 使用裸 session 发送请求以避免自动设置 Content-Type
+        # 使用新的 session 避免继承主 session 的 Content-Type: application/json
         with requests.Session() as s:
             s.headers.update({"X-Api-Key": self.api_key})
             resp = s.get(url, params=params, timeout=60)

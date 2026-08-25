@@ -31,24 +31,24 @@ def demo_independent_sessions() -> None:
 
 
 def demo_session_reuse() -> None:
-    """复用同一会话，状态在多次执行之间保持。"""
-    print_section("Demo B: 复用同一会话（状态保持）")
+    """复用同一会话，通过文件保持状态。"""
+    print_section("Demo B: 复用同一会话（通过文件保持状态）")
     client = create_client()
     sid = None
     try:
         sid = client.create_session()
 
-        # 第一次执行：定义变量
-        res = client.exec_python(sid, "x = 42")
+        # 第一次执行：定义变量并写入文件
+        res = client.exec_python(sid, "x = 42; open('/tmp/state.txt', 'w').write(str(x))")
         assert res.success, "第一次执行失败"
-        print("✅ 定义变量 x = 42")
+        print("✅ 定义变量 x = 42 并持久化到文件")
 
-        # 第二次执行：使用变量
-        res = client.exec_python(sid, "print(f'x is {x}, x*2 = {x*2}')")
+        # 第二次执行：从文件读取变量并使用
+        res = client.exec_python(sid, "x = int(open('/tmp/state.txt').read()); print(f'x is {x}, x*2 = {x*2}')")
         print(res.stdout.strip())
 
-        # 第三次执行：修改变量
-        res = client.exec_python(sid, "x += 8; print(f'x now = {x}')")
+        # 第三次执行：修改变量并更新文件
+        res = client.exec_python(sid, "x = int(open('/tmp/state.txt').read()); x += 8; open('/tmp/state.txt', 'w').write(str(x)); print(f'x now = {x}')")
         print(res.stdout.strip())
     finally:
         if sid:

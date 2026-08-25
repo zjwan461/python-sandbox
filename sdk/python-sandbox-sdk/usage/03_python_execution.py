@@ -61,15 +61,17 @@ print("still alive")
 
 
 def demo_state_accumulation() -> None:
-    print_section("Demo C: 多段代码累积状态")
+    print_section("Demo C: 多段代码通过文件累积状态")
     with sandbox_session() as (client, sid):
-        for snippet in [
-            "data = []",
-            "data.append(1); data.append(2)",
-            "print(sum(data))",
-        ]:
+        # 每次执行通过文件持久化状态（每次 exec_python 是独立的 docker exec）
+        snippets = [
+            ("import json; json.dump([], open('/tmp/data.json', 'w'))", "初始化空列表"),
+            ("import json; d = json.load(open('/tmp/data.json')); d.extend([1, 2]); json.dump(d, open('/tmp/data.json', 'w')); print(f'list now: {d}')", "追加 1, 2"),
+            ("import json; d = json.load(open('/tmp/data.json')); print(f'sum = {sum(d)}')", "求和"),
+        ]
+        for snippet, desc in snippets:
             res = client.exec_python(sid, snippet)
-            print(f"  >>> {snippet}")
+            print(f"  >>> {desc}")
             print(f"      {res.stdout.strip() or '(no output)'}")
 
 

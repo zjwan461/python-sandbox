@@ -22,9 +22,8 @@ def upload_local_image(client, sid: str, local_path: str, container_path: str) -
 
 def demo_image_thumbnail() -> None:
     print_section("Demo A: 上传图片 -> 生成缩略图 -> 下载")
-    with sandbox_session() as (client, sid):
-        # 1) 本地构造一张 PNG（无需外部素材）
-        from PIL import Image  # type: ignore
+
+    # 1) 本地构造一张图片（无需外部素材）
     # 注：PIL 在 sandbox 外不一定装了，所以这里本地用 numpy 生成一张占位图
     img_array = (np.random.rand(256, 256, 3) * 255).astype("uint8")
     local_src = "/tmp/demo_src.png"
@@ -32,7 +31,7 @@ def demo_image_thumbnail() -> None:
         from PIL import Image as PILImage  # type: ignore
         PILImage.fromarray(img_array).save(local_src)
     except ImportError:
-        # 退路：直接写最小 PNG（不依赖 PIL）
+        # 退路：直接写原始二进制数据（不依赖 PIL）
         local_src = "/tmp/demo_src.bin"
         img_array.tofile(local_src)
 
@@ -42,7 +41,7 @@ def demo_image_thumbnail() -> None:
             client.upload_file(sid, "/data/input.bin", f.read())
         print(f"✅ 上传源文件 -> /data/input.bin ({os.path.getsize(local_src)} bytes)")
 
-        # 3) 在沙箱中处理（沙箱内一般装有 Pillow）
+        # 3) 在沙箱中处理（沙箱内安装 Pillow）
         client.pip_install(sid, "pillow")
         client.pip_install(sid, "numpy")
         code = """
@@ -68,7 +67,7 @@ except Exception as e:
 
         # 4) 下载回本地
         local_dst = "/tmp/demo_thumb.bin"
-        for path, label in [("/data/thumb.png", local_dst), ("/data/thumb.bin", local_dst)]:
+        for path in ["/data/thumb.png", "/data/thumb.bin"]:
             try:
                 data = client.download_file(sid, path)
                 with open(local_dst, "wb") as f:
