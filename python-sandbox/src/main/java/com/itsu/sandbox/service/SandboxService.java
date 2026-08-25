@@ -323,15 +323,14 @@ public class SandboxService {
 
     private Process runCommand(String... command) {
         try {
-            return new ProcessBuilder(command)
-                    .redirectErrorStream(true)
-                    .redirectInput(ProcessBuilder.Redirect.DISCARD)
-                    .start();
+            Process process = new ProcessBuilder(command).start();
+            // 关闭 stdin 防止 cat 等命令等待输入而卡住
+            process.getOutputStream().close();
+            return process;
         } catch (IOException e) {
             throw new SandboxException("COMMAND_FAILED", "Failed to execute command: " + e.getMessage(), e);
         }
     }
-
     private void checkExitCode(Process process, String errorMsg) {
         try {
             int exitCode = process.waitFor();
