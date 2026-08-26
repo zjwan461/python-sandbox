@@ -433,6 +433,17 @@
   <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
+        异步客户端
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
         不使用上下文管理器
       
     </span>
@@ -463,7 +474,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
+  <a href="#_8" class="md-nav__link">
     <span class="md-ellipsis">
       
         通用方法
@@ -474,7 +485,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_8" class="md-nav__link">
+  <a href="#_9" class="md-nav__link">
     <span class="md-ellipsis">
       
         代码执行
@@ -496,7 +507,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_9" class="md-nav__link">
+  <a href="#_10" class="md-nav__link">
     <span class="md-ellipsis">
       
         文件操作
@@ -512,7 +523,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_10" class="md-nav__link">
+  <a href="#_11" class="md-nav__link">
     <span class="md-ellipsis">
       
         异常处理
@@ -551,7 +562,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_11" class="md-nav__link">
+  <a href="#_12" class="md-nav__link">
     <span class="md-ellipsis">
       
         环境变量
@@ -562,7 +573,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_12" class="md-nav__link">
+  <a href="#_13" class="md-nav__link">
     <span class="md-ellipsis">
       
         许可证
@@ -706,6 +717,17 @@
   <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
+        异步客户端
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
         不使用上下文管理器
       
     </span>
@@ -736,7 +758,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
+  <a href="#_8" class="md-nav__link">
     <span class="md-ellipsis">
       
         通用方法
@@ -747,7 +769,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_8" class="md-nav__link">
+  <a href="#_9" class="md-nav__link">
     <span class="md-ellipsis">
       
         代码执行
@@ -769,7 +791,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_9" class="md-nav__link">
+  <a href="#_10" class="md-nav__link">
     <span class="md-ellipsis">
       
         文件操作
@@ -785,7 +807,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_10" class="md-nav__link">
+  <a href="#_11" class="md-nav__link">
     <span class="md-ellipsis">
       
         异常处理
@@ -824,7 +846,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_11" class="md-nav__link">
+  <a href="#_12" class="md-nav__link">
     <span class="md-ellipsis">
       
         环境变量
@@ -835,7 +857,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_12" class="md-nav__link">
+  <a href="#_13" class="md-nav__link">
     <span class="md-ellipsis">
       
         许可证
@@ -937,6 +959,9 @@ public class Main {
 <h4 id="_4">安装</h4>
 <p>从 PyPI（发布后）：</p>
 <pre><code class="language-bash">pip install python-sandbox-sdk
+
+# 安装异步支持（可选）
+pip install python-sandbox-sdk[async]
 </code></pre>
 <p>或从本地源码：</p>
 <pre><code class="language-bash">cd sdk/python-sandbox-sdk
@@ -983,7 +1008,40 @@ with SandboxClient(&quot;http://localhost:8080&quot;, &quot;sandbox-secret-key&q
     # 清理会话
     client.delete_session(session_id)
 </code></pre>
-<h4 id="_6">不使用上下文管理器</h4>
+<h4 id="_6">异步客户端</h4>
+<p>Python SDK 还提供完整的异步客户端 <code>AsyncSandboxClient</code>，基于 <code>aiohttp</code> 实现：</p>
+<pre><code class="language-python">import asyncio
+from python_sandbox_sdk import AsyncSandboxClient
+
+async def main():
+    async with AsyncSandboxClient(&quot;http://localhost:8080&quot;, &quot;sandbox-secret-key&quot;) as client:
+        # 检查服务状态
+        if await client.is_health():
+            print(&quot;Sandbox is ready!&quot;)
+
+        # 创建会话
+        session_id = await client.create_session()
+        print(f&quot;Session created: {session_id}&quot;)
+
+        # 执行 Python 代码
+        result = await client.exec_python(session_id, &quot;print('Async works!')&quot;)
+        print(f&quot;Output: {result.stdout}&quot;)
+
+        # 文件操作
+        await client.write_file(session_id, &quot;/tmp/async.txt&quot;, &quot;Async content&quot;)
+        content = await client.read_file(session_id, &quot;/tmp/async.txt&quot;)
+        print(content)
+
+        # 清理会话
+        await client.delete_session(session_id)
+
+asyncio.run(main())
+</code></pre>
+<p>异步客户端的优势：
+- 所有方法均为 <code>async</code>，支持 <code>await</code> 调用
+- 支持 <code>async with</code> 上下文管理器
+- 适合与 <code>asyncio</code> 生态集成，实现高并发场景</p>
+<h4 id="_7">不使用上下文管理器</h4>
 <pre><code class="language-python">client = SandboxClient(&quot;http://localhost:8080&quot;, &quot;sandbox-secret-key&quot;)
 try:
     session_id = client.create_session()
@@ -996,7 +1054,7 @@ finally:
 </code></pre>
 <hr />
 <h2 id="api">API 参考</h2>
-<h3 id="_7">通用方法</h3>
+<h3 id="_8">通用方法</h3>
 <table>
 <thead>
 <tr>
@@ -1019,7 +1077,7 @@ finally:
 </tr>
 </tbody>
 </table>
-<h3 id="_8">代码执行</h3>
+<h3 id="_9">代码执行</h3>
 <table>
 <thead>
 <tr>
@@ -1075,7 +1133,7 @@ finally:
 </tr>
 </tbody>
 </table>
-<h3 id="_9">文件操作</h3>
+<h3 id="_10">文件操作</h3>
 <table>
 <thead>
 <tr>
@@ -1113,7 +1171,7 @@ finally:
 </tbody>
 </table>
 <hr />
-<h2 id="_10">异常处理</h2>
+<h2 id="_11">异常处理</h2>
 <h3 id="java">Java</h3>
 <pre><code class="language-java">try {
     client.execPython(sessionId, &quot;...&quot;);
@@ -1135,13 +1193,13 @@ except requests.RequestException as e:
     print(f&quot;Network error: {e}&quot;)
 </code></pre>
 <hr />
-<h2 id="_11">环境变量</h2>
+<h2 id="_12">环境变量</h2>
 <p>SDK 配置也可以通过环境变量指定（适用于 docker-compose 部署场景）：</p>
 <pre><code class="language-bash">export SANDBOX_API_KEY=my-secret-key
 export SANDBOX_BASE_URL=http://my-server:8080
 </code></pre>
 <hr />
-<h2 id="_12">许可证</h2>
+<h2 id="_13">许可证</h2>
 <p>MIT License</p>
 
 
