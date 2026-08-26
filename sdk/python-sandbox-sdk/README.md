@@ -14,7 +14,8 @@ Python Sandbox 官方 Python SDK — 在隔离的 Docker 容器中执行 Python 
 - 🔌 **上下文管理器**：自动管理 HTTP 连接与会话生命周期
 - 🛡️ **异常体系**：独立的 `ApiRequestError` / `SandboxError` 类型
 - 🧵 **线程安全**：`requests.Session` 复用，支持 `ThreadPoolExecutor` 并发
-- 🐍 **Python ≥ 3.8**：仅依赖 `requests>=2.31.0`
+- ⚡ **异步支持**：提供 `AsyncSandboxClient`，基于 `aiohttp` 实现完整异步 API
+- 🐍 **Python ≥ 3.8**：同步客户端仅依赖 `requests>=2.31.0`
 
 ## 📦 安装
 
@@ -26,6 +27,9 @@ pip install python-sandbox-sdk
 git clone https://github.com/zjwan461/python-sandbox.git
 cd python-sandbox/sdk/python-sandbox-sdk
 pip install -e .
+
+# 安装异步支持（可选）
+pip install python-sandbox-sdk[async]
 ```
 
 ## 🚀 快速开始
@@ -81,7 +85,6 @@ content = client.read_file(session_id, "/tmp/config.json")
 client.upload_file(session_id, "/tmp/image.png", b"\\x89PNG...")
 data = client.download_file(session_id, "/tmp/image.png")
 ```
-
 ## 📚 使用样例（覆盖全部 API 与典型场景）
 
 完整可运行样例见 [`usage/`](usage/) 目录：
@@ -98,6 +101,8 @@ data = client.download_file(session_id, "/tmp/image.png")
 | [`08_data_analysis.py`](usage/08_data_analysis.py) | 数据分析实战：requests + pandas + matplotlib | 综合 |
 | [`09_long_running.py`](usage/09_long_running.py) | 长任务：进度回报 + 异常安全 | `exec_python`, `exec_shell` |
 | [`10_concurrent_sessions.py`](usage/10_concurrent_sessions.py) | 并发：`ThreadPoolExecutor` + 上限约束 | 多会话并行 |
+| [`11_error_handling.py`](usage/11_error_handling.py) | 错误全景：鉴权 / 会话 / 黑名单 / 网络 | 全 API 错误路径 |
+| [`12_async_client.py`](usage/12_async_client.py) | 异步客户端：完整异步操作示例 | 全 API 异步版本 |
 | [`11_error_handling.py`](usage/11_error_handling.py) | 错误全景：鉴权 / 会话 / 黑名单 / 网络 | 全 API 错误路径 |
 
 运行样例：
@@ -129,6 +134,8 @@ for f in 0[1-9]_*.py 1[0-1]_*.py; do python "$f"; done
 
 `CommandResult` 字段：`exit_code`, `stdout`, `stderr`, `success`（property）, `combined_output`（property）。
 
+> 💡 **异步版本**：`AsyncSandboxClient` 提供完全相同的 API，所有方法均为 `async`，支持 `await` 调用和 `async with` 上下文管理器。
+
 ## ⚙️ 环境变量
 
 为避免硬编码，样例通过环境变量注入连接信息：
@@ -158,6 +165,8 @@ except OSError as e:
 
 ## 🧵 并发使用
 
+### 同步并发（ThreadPoolExecutor）
+
 ```python
 from concurrent.futures import ThreadPoolExecutor
 # 每个任务使用独立的 client + session（线程安全）
@@ -165,6 +174,33 @@ with ThreadPoolExecutor(max_workers=5) as pool:
     futures = [pool.submit(run_one_task, i) for i in range(5)]
     for f in futures:
         print(f.result())
+```
+
+### 异步并发（AsyncSandboxClient）
+
+```python
+import asyncio
+from python_sandbox_sdk import AsyncSandboxClient
+
+async def run_task(task_id):
+    async with AsyncSandboxClient("http://localhost:8080", "sandbox-secret-key") as client:
+        session_id = await client.create_session()
+        try:
+            result = await client.exec_python(
+                session_id, f"print('Task {task_id} done')"
+            )
+            return result.stdout
+        finally:
+            await client.delete_session(session_id)
+
+async def main():
+    # 并发执行 5 个任务
+    tasks = [run_task(i) for i in range(5)]
+    results = await asyncio.gather(*tasks)
+    for r in results:
+        print(r)
+
+asyncio.run(main())
 ```
 
 > ⚠️ 并发数受后端 `sandbox.max-containers`（默认 10）约束。

@@ -89,6 +89,9 @@ try (SandboxClient client = new SandboxClient(url, apiKey)) {
 
 ```bash
 pip install python-sandbox-sdk
+
+# 安装异步支持（可选）
+pip install python-sandbox-sdk[async]
 ```
 
 或从本地源码：
@@ -141,6 +144,44 @@ with SandboxClient("http://localhost:8080", "sandbox-secret-key") as client:
     # 清理会话
     client.delete_session(session_id)
 ```
+
+#### 异步客户端
+
+Python SDK 还提供完整的异步客户端 `AsyncSandboxClient`，基于 `aiohttp` 实现：
+
+```python
+import asyncio
+from python_sandbox_sdk import AsyncSandboxClient
+
+async def main():
+    async with AsyncSandboxClient("http://localhost:8080", "sandbox-secret-key") as client:
+        # 检查服务状态
+        if await client.is_health():
+            print("Sandbox is ready!")
+        
+        # 创建会话
+        session_id = await client.create_session()
+        print(f"Session created: {session_id}")
+        
+        # 执行 Python 代码
+        result = await client.exec_python(session_id, "print('Async works!')")
+        print(f"Output: {result.stdout}")
+        
+        # 文件操作
+        await client.write_file(session_id, "/tmp/async.txt", "Async content")
+        content = await client.read_file(session_id, "/tmp/async.txt")
+        print(content)
+        
+        # 清理会话
+        await client.delete_session(session_id)
+
+asyncio.run(main())
+```
+
+异步客户端的优势：
+- 所有方法均为 `async`，支持 `await` 调用
+- 支持 `async with` 上下文管理器
+- 适合与 `asyncio` 生态集成，实现高并发场景
 
 #### 不使用上下文管理器
 
