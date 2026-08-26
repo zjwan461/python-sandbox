@@ -15,8 +15,7 @@
     Hello!
 """
 
-import os
-import tempfile
+import io
 from typing import Optional
 
 import aiohttp
@@ -266,31 +265,27 @@ class AsyncSandboxClient:
             container_path: 容器内目标路径
             data: 文件字节数据
         """
-        # 写入临时文件
-        fd, tmp_path = tempfile.mkstemp(prefix="sandbox_upload_")
-        try:
-            with os.fdopen(fd, "wb") as f:
-                f.write(data)
+        import os
 
-            url = f"{self.base_url}/api/sandbox/file/upload"
-            form = aiohttp.FormData()
-            form.add_field(
-                "file",
-                open(tmp_path, "rb"),
-                filename=os.path.basename(container_path),
-            )
-            form.add_field("sessionId", session_id)
-            form.add_field("path", container_path)
+        url = f"{self.base_url}/api/sandbox/file/upload"
+        
+        # 使用 BytesIO 避免临时文件和阻塞 I/O
+        file_obj = io.BytesIO(data)
+        form = aiohttp.FormData()
+        form.add_field(
+            "file",
+            file_obj,
+            filename=os.path.basename(container_path),
+        )
+        form.add_field("sessionId", session_id)
+        form.add_field("path", container_path)
 
-            # 上传使用独立的 session，避免继承主 session 的 Content-Type
-            upload_timeout = aiohttp.ClientTimeout(total=120)
-            async with aiohttp.ClientSession(timeout=upload_timeout) as upload_session:
-                upload_session.headers.update({"X-Api-Key": self.api_key})
-                async with upload_session.post(url, data=form) as resp:
-                    await self._raise_if_error(resp)
-        finally:
-            if os.path.exists(tmp_path):
-                os.unlink(tmp_path)
+        # 上传使用独立的 session，避免继承主 session 的 Content-Type
+        upload_timeout = aiohttp.ClientTimeout(total=120)
+        async with aiohttp.ClientSession(timeout=upload_timeout) as upload_session:
+            upload_session.headers.update({"X-Api-Key": self.api_key})
+            async with upload_session.post(url, data=form) as resp:
+                await self._raise_if_error(resp)
 
     async def download_file(self, session_id: str, container_path: str) -> bytes:
         """
