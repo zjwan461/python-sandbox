@@ -9,15 +9,15 @@ server:
 
 sandbox:
   api-key: ${SANDBOX_API_KEY:sandbox-secret-key}
-  image: python:3.12-trixie
-  container-name-prefix: python-sandbox-
-  session-timeout-millis: 86400000       # 会话超时时间，默认 24 小时
-  session-cleanup-interval-millis: 3600000  # 清理检查间隔，默认 1 小时
-  max-containers: 10                     # 最大活跃容器数量，默认 10 个
-  max-containers-behavior: reject        # reject / evict-oldest
-  pull-image-on-startup: false           # 是否在应用启动时预拉取 Python 镜像
-  create-default-container-on-startup: true # 是否在应用启动时创建默认镜像
-  container-memory-limit: 536870912      # 单个容器最大内存限制（字节），默认 512MB
+  image: ${SANDBOX_IMAGE:python:3.12-trixie}
+  container-name-prefix: ${SANDBOX_CONTAINER_NAME_PREFIX:python-sandbox-}
+  session-timeout-millis: ${SANDBOX_SESSION_TIMEOUT_MILLIS:86400000}       # 会话超时时间，默认 24 小时
+  session-cleanup-interval-millis: ${SANDBOX_SESSION_CLEANUP_INTERVAL_MILLIS:3600000}  # 清理检查间隔，默认 1 小时
+  max-containers: ${SANDBOX_MAX_CONTAINERS:10}                     # 最大活跃容器数量，默认 10 个
+  max-containers-behavior: ${SANDBOX_MAX_CONTAINERS_BEHAVIOR:reject}        # reject / evict-oldest
+  pull-image-on-startup: ${SANDBOX_PULL_IMAGE_ON_STARTUP:false}           # 是否在应用启动时预拉取 Python 镜像
+  create-default-container-on-startup: ${SANDBOX_CREATE_DEFAULT_CONTAINER_ON_STARTUP:true} # 是否在应用启动时创建默认镜像
+  container-memory-limit: ${SANDBOX_CONTAINER_MEMORY_LIMIT:536870912}      # 单个容器最大内存限制（字节），默认 512MB
                                          # 设置为 0 表示不限制
                                          # 示例：512MB=536870912, 1GB=1073741824, 256MB=268435456
   # Docker 连接配置
