@@ -19,7 +19,6 @@ import com.github.dockerjava.transport.DockerHttpClient;
 
 import io.github.sandbox.config.SandboxConfig;
 import io.github.sandbox.exception.SandboxException;
-import io.github.sandbox.service.SandboxService.SandboxSession;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.Data;
