@@ -19,9 +19,11 @@ import com.github.dockerjava.transport.DockerHttpClient;
 
 import io.github.sandbox.config.SandboxConfig;
 import io.github.sandbox.exception.SandboxException;
+import io.github.sandbox.service.SandboxService.SandboxSession;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.Data;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -38,11 +40,13 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Service
 @EnableScheduling
+@Getter
 public class SandboxService {
 
     private final SandboxConfig config;
     private final Map<String, SandboxSession> sessions = new ConcurrentHashMap<>();
     private DockerClient dockerClient;
+    public static final String DEFAULT_SESSION_ID = "default";
 
     public SandboxService(SandboxConfig config) {
         this.config = config;
@@ -55,6 +59,12 @@ public class SandboxService {
             pullImageOnStartup();
         } else {
             log.info("pull-image-on-startup is disabled, skip pre-pulling image: {}", config.getImage());
+        }
+        if (config.isCreateDefaultContainerOnStartup()) {
+            createContainer(DEFAULT_SESSION_ID);
+        } else {
+            log.info("create-default-container-on-startup is disabled, skill create default container: {}",
+                    DEFAULT_SESSION_ID);
         }
     }
 
@@ -315,7 +325,8 @@ public class SandboxService {
 
     public void removeContainer(String sessionId) {
         SandboxSession session = sessions.remove(sessionId);
-        if (session == null) return;
+        if (session == null)
+            return;
         try {
             dockerClient.killContainerCmd(session.containerId).exec();
         } catch (Exception e) {
@@ -334,7 +345,8 @@ public class SandboxService {
         log.info("Pre-pulling sandbox image on startup: {}", image);
         try {
             dockerClient.pullImageCmd(image)
-                    .exec(new ResultCallback.Adapter<PullResponseItem>() {})
+                    .exec(new ResultCallback.Adapter<PullResponseItem>() {
+                    })
                     .awaitCompletion();
             log.info("Successfully pre-pulled image: {}", image);
         } catch (Exception e) {
@@ -370,7 +382,7 @@ public class SandboxService {
         sessions.entrySet().removeIf(entry -> {
             SandboxSession session = entry.getValue();
             Instant expireTime = session.getLastActivity().plusMillis(timeoutMillis);
-            if (now.isAfter(expireTime)) {
+            if (now.isAfter(expireTime) && !session.getSessionId().equals(DEFAULT_SESSION_ID)) {
                 log.info("Removing expired session: {} (timeout: {}ms)", entry.getKey(), timeoutMillis);
                 try {
                     dockerClient.killContainerCmd(session.containerId).exec();
@@ -387,7 +399,8 @@ public class SandboxService {
 
     public boolean isActive(String sessionId) {
         SandboxSession session = sessions.get(sessionId);
-        if (session == null) return false;
+        if (session == null)
+            return false;
         try {
             InspectContainerResponse inspect = dockerClient.inspectContainerCmd(session.containerId).exec();
             return Boolean.TRUE.equals(inspect.getState().getRunning());
@@ -429,7 +442,8 @@ public class SandboxService {
             for (Container container : containers) {
                 try {
                     dockerClient.killContainerCmd(container.getId()).exec();
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
                 try {
                     dockerClient.removeContainerCmd(container.getId()).withForce(true).exec();
                     log.info("Cleaned up existing container: {}", name);
@@ -443,7 +457,8 @@ public class SandboxService {
     }
 
     private void evictOldestSessionIfNecessary() {
-        if (sessions.size() < config.getMaxContainers()) return;
+        if (sessions.size() < config.getMaxContainers())
+            return;
         String oldestSessionId = null;
         Instant oldestActivity = null;
         for (Map.Entry<String, SandboxSession> entry : sessions.entrySet()) {
@@ -491,7 +506,8 @@ public class SandboxService {
         int offset = 0;
         while (offset < size) {
             int read = tarStream.read(content, offset, (int) size - offset);
-            if (read < 0) break;
+            if (read < 0)
+                break;
             offset += read;
         }
         return content;
@@ -510,11 +526,25 @@ public class SandboxService {
             this.stderr = stderr;
         }
 
-        public int getExitCode() { return exitCode; }
-        public String getStdout() { return stdout; }
-        public String getStderr() { return stderr; }
-        public boolean isSuccess() { return exitCode == 0; }
-        public String getCombinedOutput() { return stdout + (stderr.isEmpty() ? "" : "\n" + stderr); }
+        public int getExitCode() {
+            return exitCode;
+        }
+
+        public String getStdout() {
+            return stdout;
+        }
+
+        public String getStderr() {
+            return stderr;
+        }
+
+        public boolean isSuccess() {
+            return exitCode == 0;
+        }
+
+        public String getCombinedOutput() {
+            return stdout + (stderr.isEmpty() ? "" : "\n" + stderr);
+        }
     }
 
     @Data
