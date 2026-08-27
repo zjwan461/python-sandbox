@@ -26,7 +26,7 @@ def _read_readme() -> str:
 
 setup(
     name="python-sandbox-sdk",
-    version="1.0.0",
+    version="1.0.3",
     description="Python SDK for Python Sandbox API - Run Python code, shell commands, and manage packages in Docker containers",
     long_description=_read_readme(),
     long_description_content_type="text/markdown",

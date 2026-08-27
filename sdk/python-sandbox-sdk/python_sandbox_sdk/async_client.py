@@ -85,6 +85,19 @@ class AsyncSandboxClient:
             data = await resp.json()
             return data["sessionId"]
 
+    async def create_default_session(self) -> str:
+        """
+        创建新的沙箱会话
+
+        Returns:
+            会话 ID
+        """
+        session = await self._get_session()
+        async with session.post(f"{self.base_url}/api/sandbox/session-default") as resp:
+            await self._raise_if_error(resp)
+            data = await resp.json()
+            return data["sessionId"]
+
     async def delete_session(self, session_id: str) -> None:
         """
         删除会话并清理容器
@@ -167,9 +180,7 @@ class AsyncSandboxClient:
                 data["exitCode"], data.get("stdout", ""), data.get("stderr", "")
             )
 
-    async def pip_uninstall(
-        self, session_id: str, package_name: str
-    ) -> CommandResult:
+    async def pip_uninstall(self, session_id: str, package_name: str) -> CommandResult:
         """
         卸载 Python 包
 
@@ -268,7 +279,7 @@ class AsyncSandboxClient:
         import os
 
         url = f"{self.base_url}/api/sandbox/file/upload"
-        
+
         # 使用 BytesIO 避免临时文件和阻塞 I/O
         file_obj = io.BytesIO(data)
         form = aiohttp.FormData()

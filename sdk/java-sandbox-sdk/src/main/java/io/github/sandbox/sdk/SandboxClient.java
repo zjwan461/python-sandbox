@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
  * 提供简洁的 API 客户端以与 Python Sandbox 服务交互。
  * 
  * 使用示例：
+ * 
  * <pre>
  * SandboxClient client = new SandboxClient("http://localhost:8080", "your-api-key");
  * String sessionId = client.createSession();
@@ -48,6 +49,16 @@ public class SandboxClient {
      */
     public String createSession() throws Exception {
         java.util.Map<String, Object> response = postJson("/api/sandbox/session", "{}", java.util.Map.class);
+        return (String) response.get("sessionId");
+    }
+
+    /**
+     * 创建默认沙箱会话
+     *
+     * @return 会话 ID
+     */
+    public String createDefaultSession() throws Exception {
+        java.util.Map<String, Object> response = postJson("/api/sandbox/session-default", "{}", java.util.Map.class);
         return (String) response.get("sessionId");
     }
 
@@ -93,8 +104,8 @@ public class SandboxClient {
     /**
      * 安装 Python 包
      *
-     * @param sessionId    会话 ID
-     * @param packageName  包名（支持版本约束，如 requests>=2.28）
+     * @param sessionId   会话 ID
+     * @param packageName 包名（支持版本约束，如 requests>=2.28）
      * @return 执行结果
      */
     public SandboxResponse pipInstall(String sessionId, String packageName) throws Exception {
@@ -106,8 +117,8 @@ public class SandboxClient {
     /**
      * 卸载 Python 包
      *
-     * @param sessionId    会话 ID
-     * @param packageName  包名
+     * @param sessionId   会话 ID
+     * @param packageName 包名
      * @return 执行结果
      */
     public SandboxResponse pipUninstall(String sessionId, String packageName) throws Exception {
@@ -123,7 +134,8 @@ public class SandboxClient {
      * @return 安装包列表（文本格式）
      */
     public String pipList(String sessionId) throws Exception {
-        java.util.Map<String, Object> response = getJson(String.format("/api/sandbox/pip/list?sessionId=%s", sessionId), java.util.Map.class);
+        java.util.Map<String, Object> response = getJson(String.format("/api/sandbox/pip/list?sessionId=%s", sessionId),
+                java.util.Map.class);
         return (String) response.get("packages");
     }
 
@@ -165,8 +177,9 @@ public class SandboxClient {
      * @param data          文件字节数据
      */
     public void uploadFile(String sessionId, String containerPath, byte[] data) throws Exception {
-        if (data == null) throw new IllegalArgumentException("File data cannot be null");
-        
+        if (data == null)
+            throw new IllegalArgumentException("File data cannot be null");
+
         // 构造 multipart/form-data 请求
         String boundary = "----SandboxSDKBoundary" + System.currentTimeMillis();
         URL url = new URL(baseUrl + "/api/sandbox/file/upload");
@@ -177,45 +190,47 @@ public class SandboxClient {
         conn.setConnectTimeout(10000);
         conn.setReadTimeout(60000);
         conn.setDoOutput(true);
-        
+
         try (OutputStream os = conn.getOutputStream();
-             PrintWriter writer = new PrintWriter(new OutputStreamWriter(os, StandardCharsets.UTF_8), true)) {
-            
+                PrintWriter writer = new PrintWriter(new OutputStreamWriter(os, StandardCharsets.UTF_8), true)) {
+
             // sessionId 字段
             writer.append("--").append(boundary).append("\r\n");
             writer.append("Content-Disposition: form-data; name=\"sessionId\"\r\n\r\n");
             writer.append(sessionId).append("\r\n");
             writer.flush();
-            
+
             // path 字段
             writer.append("--").append(boundary).append("\r\n");
             writer.append("Content-Disposition: form-data; name=\"path\"\r\n\r\n");
             writer.append(containerPath).append("\r\n");
             writer.flush();
-            
+
             // file 字段
             String fileName = containerPath.substring(containerPath.lastIndexOf('/') + 1);
             writer.append("--").append(boundary).append("\r\n");
-            writer.append("Content-Disposition: form-data; name=\"file\"; filename=\"").append(fileName).append("\"\r\n");
+            writer.append("Content-Disposition: form-data; name=\"file\"; filename=\"").append(fileName)
+                    .append("\"\r\n");
             writer.append("Content-Type: application/octet-stream\r\n\r\n");
             writer.flush();
             os.write(data);
             os.flush();
             writer.append("\r\n");
             writer.flush();
-            
+
             // 结束标记
             writer.append("--").append(boundary).append("--\r\n");
             writer.flush();
         }
-        
+
         int status = conn.getResponseCode();
         if (status < 200 || status >= 300) {
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8))) {
                 StringBuilder sb = new StringBuilder();
                 String line;
-                while ((line = reader.readLine()) != null) sb.append(line);
+                while ((line = reader.readLine()) != null)
+                    sb.append(line);
                 throw new IOException("HTTP " + status + ": " + sb.toString());
             }
         }
@@ -231,19 +246,21 @@ public class SandboxClient {
     public byte[] downloadFile(String sessionId, String containerPath) throws Exception {
         HttpURLConnection conn = sendRequest("GET",
                 String.format("%s/api/sandbox/file/download?sessionId=%s&path=%s",
-                        baseUrl, sessionId, containerPath), null);
-        
+                        baseUrl, sessionId, containerPath),
+                null);
+
         int status = conn.getResponseCode();
         if (status < 200 || status >= 300) {
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8))) {
                 StringBuilder sb = new StringBuilder();
                 String line;
-                while ((line = reader.readLine()) != null) sb.append(line);
+                while ((line = reader.readLine()) != null)
+                    sb.append(line);
                 throw new IOException("HTTP " + status + ": " + sb.toString());
             }
         }
-        
+
         try (InputStream is = conn.getInputStream()) {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             is.transferTo(baos);
@@ -272,15 +289,17 @@ public class SandboxClient {
     private <T> T postJson(String path, String json, Class<T> clazz) throws Exception {
         HttpURLConnection conn = sendRequest("POST", baseUrl + path, json);
         conn.setRequestProperty("Content-Type", "application/json");
-        
+
         int status = conn.getResponseCode();
         if (status >= 200 && status < 300) {
-            if (clazz == Void.class) return null;
+            if (clazz == Void.class)
+                return null;
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
                 StringBuilder sb = new StringBuilder();
                 String line;
-                while ((line = reader.readLine()) != null) sb.append(line);
+                while ((line = reader.readLine()) != null)
+                    sb.append(line);
                 return objectMapper.readValue(sb.toString(), clazz);
             }
         } else {
@@ -288,7 +307,8 @@ public class SandboxClient {
                     new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8))) {
                 StringBuilder sb = new StringBuilder();
                 String line;
-                while ((line = reader.readLine()) != null) sb.append(line);
+                while ((line = reader.readLine()) != null)
+                    sb.append(line);
                 throw new IOException("HTTP " + status + ": " + sb.toString());
             }
         }
@@ -302,7 +322,8 @@ public class SandboxClient {
                     new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
                 StringBuilder sb = new StringBuilder();
                 String line;
-                while ((line = reader.readLine()) != null) sb.append(line);
+                while ((line = reader.readLine()) != null)
+                    sb.append(line);
                 return objectMapper.readValue(sb.toString(), clazz);
             }
         } else {
@@ -310,7 +331,8 @@ public class SandboxClient {
                     new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8))) {
                 StringBuilder sb = new StringBuilder();
                 String line;
-                while ((line = reader.readLine()) != null) sb.append(line);
+                while ((line = reader.readLine()) != null)
+                    sb.append(line);
                 throw new IOException("HTTP " + status + ": " + sb.toString());
             }
         }
@@ -324,7 +346,8 @@ public class SandboxClient {
                     new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8))) {
                 StringBuilder sb = new StringBuilder();
                 String line;
-                while ((line = reader.readLine()) != null) sb.append(line);
+                while ((line = reader.readLine()) != null)
+                    sb.append(line);
                 throw new IOException("HTTP " + status + ": " + sb.toString());
             }
         }
@@ -337,14 +360,14 @@ public class SandboxClient {
         conn.setRequestProperty("X-Api-Key", apiKey);
         conn.setConnectTimeout(10000);
         conn.setReadTimeout(60000);
-        
+
         if (body != null && !body.isEmpty()) {
             conn.setDoOutput(true);
             try (OutputStream os = conn.getOutputStream()) {
                 os.write(body.getBytes(StandardCharsets.UTF_8));
             }
         }
-        
+
         return conn;
     }
 }
