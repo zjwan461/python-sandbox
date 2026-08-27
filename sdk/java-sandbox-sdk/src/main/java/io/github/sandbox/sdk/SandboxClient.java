@@ -288,7 +288,6 @@ public class SandboxClient {
 
     private <T> T postJson(String path, String json, Class<T> clazz) throws Exception {
         HttpURLConnection conn = sendRequest("POST", baseUrl + path, json);
-        conn.setRequestProperty("Content-Type", "application/json");
 
         int status = conn.getResponseCode();
         if (status >= 200 && status < 300) {
@@ -360,6 +359,7 @@ public class SandboxClient {
         conn.setRequestProperty("X-Api-Key", apiKey);
         conn.setConnectTimeout(10000);
         conn.setReadTimeout(60000);
+        conn.setRequestProperty("Content-Type", "application/json");
 
         if (body != null && !body.isEmpty()) {
             conn.setDoOutput(true);
