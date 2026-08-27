@@ -42,14 +42,14 @@ public class SandboxController {
     @PostMapping("/session-default")
     public ResponseEntity<Map<String, String>> createDefaultSession() {
         try {
-            sandboxService.createContainer(DEFAULT_SESSION_ID);
+            sandboxService.createContainer(SandboxService.DEFAULT_SESSION_ID);
         } catch (SandboxException e) {
             if (!"DUPLICATE_SESSION".equals(e.getErrorCode())) {
                 throw e;
             }
         }
         Map<String, String> response = new HashMap<>();
-        response.put("sessionId", DEFAULT_SESSION_ID);
+        response.put("sessionId", SandboxService.DEFAULT_SESSION_ID);
         response.put("message", "Sandbox session created");
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
