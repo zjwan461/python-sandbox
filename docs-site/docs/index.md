@@ -119,12 +119,8 @@ DOCKER_HOST=                                # 留空自动检测本地 Docker
 ```
 
 完整配置项、环境变量对照表以及远程 Docker 配置说明请参阅
-[python-sandbox/README.md](server.md#配置项说明)。
+[python-sandbox/README.md](server.md)。
 
 ## 许可证
 
-MIT License - 详见 [LICENSE](LICENSE) 文件
-
----
-
-© 2024 ITSU Team. All rights reserved.
+MIT License
