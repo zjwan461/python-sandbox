@@ -1,0 +1,1455 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://zjwan461.github.io/python-sandbox/request-flow/">
+      
+      
+        <link rel="prev" href="../sdk/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>调用链路 - python-sandbox</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#_1" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="python-sandbox" class="md-header__button md-logo" aria-label="python-sandbox" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            python-sandbox
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              调用链路
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/zjwan461/python-sandbox" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="python-sandbox" class="md-nav__button md-logo" aria-label="python-sandbox" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    python-sandbox
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/zjwan461/python-sandbox" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首页
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../server/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    服务端文档
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SDK文档
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    调用链路
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    调用链路
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        系统架构概览
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        应用启动流程
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        请求处理链路
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="请求处理链路">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 创建会话
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 执行 Python 代码
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 执行 Shell 命令
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-pip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. pip 包管理
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 文件操作
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. 文件操作">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 写入文本文件
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 读取文本文件
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 上传文件
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#54" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.4 下载文件
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. 删除会话
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        会话管理机制
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="会话管理机制">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        会话缓存
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        会话超时清理
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        容器数量限制
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        异常处理流程
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        错误码说明
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        健康检查
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        关键配置项
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        系统架构概览
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        应用启动流程
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        请求处理链路
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="请求处理链路">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 创建会话
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 执行 Python 代码
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 执行 Shell 命令
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-pip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. pip 包管理
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 文件操作
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. 文件操作">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 写入文本文件
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 读取文本文件
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 上传文件
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#54" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.4 下载文件
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. 删除会话
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        会话管理机制
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="会话管理机制">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        会话缓存
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        会话超时清理
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        容器数量限制
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        异常处理流程
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        错误码说明
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        健康检查
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        关键配置项
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="_1">请求链路文档</h1>
+<p>本文档详细说明 Python Sandbox 服务中一个完整请求的处理流程。</p>
+<h2 id="_2">系统架构概览</h2>
+<pre><code>┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Client (SDK/HTTP)                              │
+└─────────────────────────────────┬───────────────────────────────────────────┘
+                                  │ HTTP Request
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           Spring Boot Application                           │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                        GlobalExceptionHandler                       │   │
+│  │                    (统一异常处理，返回标准错误格式)                     │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                          SandboxController                          │   │
+│  │                    (REST API 入口，路由请求)                          │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                        ShellCommandValidator                        │   │
+│  │                    (Shell 命令安全验证，拦截高危命令)                   │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                          SandboxService                             │   │
+│  │              (核心业务逻辑，会话管理，Docker 操作封装)                  │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                          DockerClient                               │   │
+│  │                    (docker-java 客户端，操作 Docker)                  │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────┬───────────────────────────────────────────┘
+                                  │ Docker API
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Docker Daemon                                  │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                    Sandbox Container (Python 3.12)                  │   │
+│  │  ┌─────────────────────────────────────────────────────────────┐   │   │
+│  │  │  • Python 解释器                                             │   │   │
+│  │  │  • pip 包管理器                                              │   │   │
+│  │  │  • 文件系统 (/tmp, /workspace 等)                            │   │   │
+│  │  └─────────────────────────────────────────────────────────────┘   │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+</code></pre>
+<h2 id="_3">应用启动流程</h2>
+<p>应用启动时，<code>SandboxService.init()</code> 方法会执行以下初始化操作：</p>
+<pre><code>1. 创建 DockerClient
+   └─&gt; 配置 Docker 连接（host, cert, tls, api-version）
+   └─&gt; 执行 docker ping 验证连接
+
+2. 可选：预拉取镜像
+   └─&gt; 如果 pull-image-on-startup=true
+   └─&gt; 执行 docker pull 拉取配置的 Python 镜像
+
+3. 可选：创建默认容器
+   └─&gt; 如果 create-default-container-on-startup=true
+   └─&gt; 创建名为 &quot;default&quot; 的会话容器
+</code></pre>
+<h2 id="_4">请求处理链路</h2>
+<h3 id="1">1. 创建会话</h3>
+<p><strong>API</strong>: <code>POST /api/sandbox/session</code></p>
+<pre><code>Client
+  │
+  ▼
+SandboxController.createSession()
+  │
+  ├─&gt; sandboxService.generateSessionId()
+  │   └─&gt; 生成唯一 ID: &quot;session-{timestamp}-{random}&quot;
+  │
+  ├─&gt; sandboxService.createContainer(sessionId)
+  │   │
+  │   ├─&gt; 检查会话是否已存在
+  │   │   └─&gt; 如果存在，抛出 DUPLICATE_SESSION 异常
+  │   │
+  │   ├─&gt; 检查容器数量限制
+  │   │   ├─&gt; 如果 max-containers-behavior=&quot;evict-oldest&quot;
+  │   │   │   └─&gt; 驱逐最旧的会话
+  │   │   └─&gt; 如果达到上限且 behavior=&quot;reject&quot;
+  │   │       └─&gt; 抛出 MAX_CONTAINERS_REACHED 异常
+  │   │
+  │   ├─&gt; 清理同名旧容器（如果存在）
+  │   │
+  │   ├─&gt; 创建 Docker 容器
+  │   │   ├─&gt; 设置容器名称: {prefix}{sessionId}
+  │   │   ├─&gt; 设置环境变量: PYTHONUNBUFFERED=1
+  │   │   ├─&gt; 启用 TTY 和 stdin/stdout/stderr
+  │   │   └─&gt; 设置内存限制（如果配置了 container-memory-limit）
+  │   │
+  │   ├─&gt; 启动容器
+  │   │
+  │   └─&gt; 创建 SandboxSession 对象并缓存到 sessions Map
+  │
+  └─&gt; 返回响应: { sessionId, message }
+</code></pre>
+<h3 id="2-python">2. 执行 Python 代码</h3>
+<p><strong>API</strong>: <code>POST /api/sandbox/exec/python</code></p>
+<pre><code>Client
+  │
+  ▼
+SandboxController.execPython(request)
+  │
+  ├─&gt; 从 request 获取 sessionId 和 code
+  │
+  ├─&gt; sandboxService.runPythonCode(sessionId, code)
+  │   │
+  │   ├─&gt; getSession(sessionId)
+  │   │   ├─&gt; 从 sessions Map 获取会话
+  │   │   ├─&gt; 检查会话是否存在
+  │   │   ├─&gt; 调用 isActive() 检查容器是否运行中
+  │   │   │   └─&gt; dockerClient.inspectContainerCmd() 查询容器状态
+  │   │   └─&gt; 更新 lastActivity 时间戳
+  │   │
+  │   ├─&gt; 写入临时 Python 文件
+  │   │   ├─&gt; 生成临时文件路径: /tmp/sandbox_{timestamp}.py
+  │   │   └─&gt; 调用 writeFile() 将代码写入容器
+  │   │
+  │   ├─&gt; 执行 Python 脚本
+  │   │   └─&gt; execInContainer(sessionId, &quot;python&quot;, tmpFile)
+  │   │       │
+  │   │       ├─&gt; dockerClient.execCreateCmd()
+  │   │       │   └─&gt; 创建 exec 实例，附加 stdout/stderr
+  │   │       │
+  │   │       ├─&gt; dockerClient.execStartCmd()
+  │   │       │   └─&gt; 启动执行，通过 ExecOutputCallback 收集输出
+  │   │       │       ├─&gt; STDOUT 帧 -&gt; stdoutStream
+  │   │       │       └─&gt; STDERR 帧 -&gt; stderrStream
+  │   │       │
+  │   │       ├─&gt; 等待执行完成（超时 300 秒）
+  │   │       │
+  │   │       └─&gt; 获取退出码
+  │   │           └─&gt; dockerClient.inspectExecCmd() 查询执行状态
+  │   │
+  │   └─&gt; 清理临时文件
+  │       └─&gt; execInContainer(sessionId, &quot;rm&quot;, &quot;-f&quot;, tmpFile)
+  │
+  └─&gt; 返回响应: { exitCode, stdout, stderr }
+</code></pre>
+<h3 id="3-shell">3. 执行 Shell 命令</h3>
+<p><strong>API</strong>: <code>POST /api/sandbox/exec/shell</code></p>
+<pre><code>Client
+  │
+  ▼
+SandboxController.execShell(request)
+  │
+  ├─&gt; 从 request 获取 sessionId 和 command
+  │
+  ├─&gt; shellCommandValidator.validate(command)
+  │   │
+  │   ├─&gt; 检查命令长度（最大 2048 字符）
+  │   │
+  │   ├─&gt; 检查基础危险命令
+  │   │   └─&gt; shutdown, halt, reboot, poweroff
+  │   │
+  │   ├─&gt; 按风险等级检查正则模式
+  │   │   ├─&gt; CRITICAL: 删除操作、磁盘格式化、磁盘覆盖
+  │   │   ├─&gt; HIGH: 网络攻击、挖矿、权限提升、系统配置、进程破坏
+  │   │   ├─&gt; MEDIUM: 敏感文件访问、数据外传、危险管道、端口扫描
+  │   │   └─&gt; LOW: 系统包管理（apt, yum 等）
+  │   │
+  │   └─&gt; 如果验证失败，抛出 SecurityException
+  │
+  ├─&gt; sandboxService.execInContainer(sessionId, &quot;sh&quot;, &quot;-c&quot;, command)
+  │   │
+  │   └─&gt; (同 Python 执行流程中的 execInContainer)
+  │
+  └─&gt; 返回响应: { exitCode, stdout, stderr }
+</code></pre>
+<h3 id="4-pip">4. pip 包管理</h3>
+<p><strong>API</strong>: 
+- <code>POST /api/sandbox/pip/install</code>
+- <code>POST /api/sandbox/pip/uninstall</code>
+- <code>GET /api/sandbox/pip/list</code></p>
+<pre><code>Client
+  │
+  ▼
+SandboxController.pipInstall/pipUninstall/pipList(request)
+  │
+  ├─&gt; 从 request 获取 sessionId 和 packageName
+  │
+  ├─&gt; sandboxService.pipInstall(sessionId, packageName)
+  │   └─&gt; execInContainer(sessionId, &quot;pip&quot;, &quot;install&quot;, packageName)
+  │
+  ├─&gt; sandboxService.pipUninstall(sessionId, packageName)
+  │   └─&gt; execInContainer(sessionId, &quot;pip&quot;, &quot;uninstall&quot;, &quot;-y&quot;, packageName)
+  │
+  ├─&gt; sandboxService.pipList(sessionId)
+  │   └─&gt; execInContainer(sessionId, &quot;pip&quot;, &quot;list&quot;, &quot;--format=freeze&quot;)
+  │
+  └─&gt; 返回响应: { exitCode, stdout, stderr } 或 { packages }
+</code></pre>
+<h3 id="5">5. 文件操作</h3>
+<h4 id="51">5.1 写入文本文件</h4>
+<p><strong>API</strong>: <code>POST /api/sandbox/file/write</code></p>
+<pre><code>Client
+  │
+  ▼
+SandboxController.writeFile(request)
+  │
+  ├─&gt; sandboxService.writeFile(sessionId, path, content)
+  │   │
+  │   ├─&gt; getSession(sessionId)
+  │   │
+  │   ├─&gt; 将内容写入宿主机临时文件
+  │   │   └─&gt; writeToTempFile(content.getBytes())
+  │   │
+  │   ├─&gt; 复制文件到容器
+  │   │   └─&gt; dockerClient.copyArchiveToContainerCmd()
+  │   │       ├─&gt; withHostResource(tmpFile)
+  │   │       └─&gt; withRemotePath(dir)
+  │   │
+  │   ├─&gt; 删除宿主机临时文件
+  │   │
+  │   └─&gt; 如果文件名不匹配，重命名
+  │       └─&gt; execInContainer(&quot;sh&quot;, &quot;-c&quot;, &quot;mv tmpFile targetPath&quot;)
+  │
+  └─&gt; 返回响应: { message }
+</code></pre>
+<h4 id="52">5.2 读取文本文件</h4>
+<p><strong>API</strong>: <code>GET /api/sandbox/file/read</code></p>
+<pre><code>Client
+  │
+  ▼
+SandboxController.readFile(sessionId, path)
+  │
+  ├─&gt; sandboxService.readFile(sessionId, path)
+  │   │
+  │   ├─&gt; downloadFile(sessionId, path)
+  │   │   │
+  │   │   ├─&gt; getSession(sessionId)
+  │   │   │
+  │   │   ├─&gt; 从容器复制文件
+  │   │   │   └─&gt; dockerClient.copyArchiveFromContainerCmd()
+  │   │   │
+  │   │   └─&gt; 解析 tar 流提取文件内容
+  │   │       └─&gt; readTarEntry(inputStream)
+  │   │
+  │   └─&gt; 将字节转换为字符串 (UTF-8)
+  │
+  └─&gt; 返回响应: { path, content }
+</code></pre>
+<h4 id="53">5.3 上传文件</h4>
+<p><strong>API</strong>: <code>POST /api/sandbox/file/upload</code></p>
+<pre><code>Client (multipart/form-data)
+  │
+  ▼
+SandboxController.uploadFile(sessionId, path, file)
+  │
+  ├─&gt; sandboxService.uploadFile(sessionId, path, file.getBytes(), originalFilename)
+  │   │
+  │   ├─&gt; 确定容器内实际路径
+  │   │   ├─&gt; 如果 path 以 &quot;/&quot; 结尾: path + originalFilename
+  │   │   ├─&gt; 如果 path 包含 &quot;.&quot;: 视为完整路径
+  │   │   └─&gt; 否则: path + &quot;/&quot; + originalFilename
+  │   │
+  │   └─&gt; (后续流程同 writeFile)
+  │
+  └─&gt; 返回响应: { message, path }
+</code></pre>
+<h4 id="54">5.4 下载文件</h4>
+<p><strong>API</strong>: <code>GET /api/sandbox/file/download</code></p>
+<pre><code>Client
+  │
+  ▼
+SandboxController.downloadFile(sessionId, path)
+  │
+  ├─&gt; sandboxService.downloadFile(sessionId, path)
+  │   └─&gt; (同 readFile 中的 downloadFile)
+  │
+  ├─&gt; 提取文件名
+  │
+  └─&gt; 返回二进制响应
+      ├─&gt; Content-Disposition: attachment; filename=&quot;...&quot;
+      ├─&gt; Content-Type: application/octet-stream
+      └─&gt; Body: 文件内容
+</code></pre>
+<h3 id="6">6. 删除会话</h3>
+<p><strong>API</strong>: <code>DELETE /api/sandbox/session/{sessionId}</code></p>
+<pre><code>Client
+  │
+  ▼
+SandboxController.deleteSession(sessionId)
+  │
+  ├─&gt; sandboxService.removeContainer(sessionId)
+  │   │
+  │   ├─&gt; 从 sessions Map 移除会话
+  │   │
+  │   ├─&gt; 停止容器
+  │   │   └─&gt; dockerClient.killContainerCmd()
+  │   │
+  │   └─&gt; 删除容器
+  │       └─&gt; dockerClient.removeContainerCmd().withForce(true)
+  │
+  └─&gt; 返回响应: { message }
+</code></pre>
+<h2 id="_5">会话管理机制</h2>
+<h3 id="_6">会话缓存</h3>
+<pre><code class="language-java">private final Map&lt;String, SandboxSession&gt; sessions = new ConcurrentHashMap&lt;&gt;();
+</code></pre>
+<ul>
+<li>使用 <code>ConcurrentHashMap</code> 保证线程安全</li>
+<li>键: sessionId</li>
+<li>值: SandboxSession 对象（包含 sessionId, containerId, name, lastActivity）</li>
+</ul>
+<h3 id="_7">会话超时清理</h3>
+<pre><code>@Scheduled(fixedRateString = &quot;${sandbox.session-cleanup-interval-millis:3600000}&quot;)
+cleanUpExpiredSessions()
+  │
+  ├─&gt; 遍历所有会话
+  │
+  ├─&gt; 检查是否超时
+  │   └─&gt; now &gt; lastActivity + sessionTimeoutMillis
+  │
+  ├─&gt; 跳过默认会话（&quot;default&quot;）
+  │
+  └─&gt; 清理超时会话
+      ├─&gt; killContainerCmd()
+      └─&gt; removeContainerCmd()
+</code></pre>
+<h3 id="_8">容器数量限制</h3>
+<pre><code>max-containers: 10 (默认)
+max-containers-behavior: reject | evict-oldest
+
+当达到上限时:
+  ├─&gt; reject: 抛出 MAX_CONTAINERS_REACHED 异常
+  └─&gt; evict-oldest: 驱逐 lastActivity 最旧的会话
+</code></pre>
+<h2 id="_9">异常处理流程</h2>
+<pre><code>异常发生
+  │
+  ▼
+GlobalExceptionHandler
+  │
+  ├─&gt; SandboxException
+  │   └─&gt; HTTP 400: { error: errorCode, message: ... }
+  │
+  ├─&gt; SecurityException
+  │   └─&gt; HTTP 403: { error: &quot;SECURITY_VIOLATION&quot;, message: ... }
+  │
+  ├─&gt; MethodArgumentNotValidException
+  │   └─&gt; HTTP 400: { error: &quot;INVALID_PARAMETER&quot;, message: ... }
+  │
+  ├─&gt; MissingServletRequestParameterException
+  │   └─&gt; HTTP 400: { error: &quot;MISSING_PARAMETER&quot;, message: ... }
+  │
+  ├─&gt; HttpMessageNotReadableException
+  │   └─&gt; HTTP 400: { error: &quot;INVALID_REQUEST_BODY&quot;, message: ... }
+  │
+  └─&gt; Exception (未知异常)
+      └─&gt; HTTP 500: { error: &quot;INTERNAL_ERROR&quot;, message: &quot;Internal server error&quot; }
+</code></pre>
+<h2 id="_10">错误码说明</h2>
+<table>
+<thead>
+<tr>
+<th>错误码</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DOCKER_CONNECT_ERROR</td>
+<td>无法连接到 Docker 守护进程</td>
+</tr>
+<tr>
+<td>DOCKER_ERROR</td>
+<td>Docker 操作失败</td>
+</tr>
+<tr>
+<td>DUPLICATE_SESSION</td>
+<td>会话 ID 已存在</td>
+</tr>
+<tr>
+<td>MAX_CONTAINERS_REACHED</td>
+<td>达到容器数量上限</td>
+</tr>
+<tr>
+<td>SESSION_NOT_FOUND</td>
+<td>会话不存在或已过期</td>
+</tr>
+<tr>
+<td>SESSION_EXPIRED</td>
+<td>会话容器已停止运行</td>
+</tr>
+<tr>
+<td>FILE_WRITE_ERROR</td>
+<td>文件写入失败</td>
+</tr>
+<tr>
+<td>FILE_READ_ERROR</td>
+<td>文件读取失败</td>
+</tr>
+<tr>
+<td>INTERRUPTED</td>
+<td>命令执行被中断</td>
+</tr>
+<tr>
+<td>SECURITY_VIOLATION</td>
+<td>Shell 命令安全验证失败</td>
+</tr>
+<tr>
+<td>COMMAND_TOO_LONG</td>
+<td>命令长度超过限制</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_11">健康检查</h2>
+<p><strong>API</strong>: <code>GET /health</code></p>
+<pre><code>Client
+  │
+  ▼
+HealthController.health()
+  │
+  ├─&gt; sandboxService.getActiveCount()
+  │   └─&gt; 返回 sessions.size()
+  │
+  └─&gt; 返回响应: { status: &quot;UP&quot;, activeContainers: N }
+</code></pre>
+<h2 id="_12">关键配置项</h2>
+<table>
+<thead>
+<tr>
+<th>配置项</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>sandbox.image</td>
+<td>python:3.12-trixie</td>
+<td>沙箱容器使用的镜像</td>
+</tr>
+<tr>
+<td>sandbox.container-name-prefix</td>
+<td>python-sandbox-</td>
+<td>容器名称前缀</td>
+</tr>
+<tr>
+<td>sandbox.session-timeout-millis</td>
+<td>86400000 (24h)</td>
+<td>会话超时时间</td>
+</tr>
+<tr>
+<td>sandbox.session-cleanup-interval-millis</td>
+<td>3600000 (1h)</td>
+<td>清理检查间隔</td>
+</tr>
+<tr>
+<td>sandbox.max-containers</td>
+<td>10</td>
+<td>最大容器数量</td>
+</tr>
+<tr>
+<td>sandbox.max-containers-behavior</td>
+<td>reject</td>
+<td>超限行为</td>
+</tr>
+<tr>
+<td>sandbox.container-memory-limit</td>
+<td>536870912 (512MB)</td>
+<td>容器内存限制</td>
+</tr>
+<tr>
+<td>sandbox.pull-image-on-startup</td>
+<td>false</td>
+<td>启动时预拉取镜像</td>
+</tr>
+<tr>
+<td>sandbox.create-default-container-on-startup</td>
+<td>true</td>
+<td>启动时创建默认容器</td>
+</tr>
+<tr>
+<td>sandbox.docker-host</td>
+<td>unix:///var/run/docker.sock</td>
+<td>Docker 连接地址</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
