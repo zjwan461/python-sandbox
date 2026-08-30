@@ -4,6 +4,9 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Data
 @Component
 @ConfigurationProperties(prefix = "sandbox")
@@ -85,4 +88,35 @@ public class SandboxConfig {
      * 示例：1.43
      */
     private String dockerApiVersion = "";
+
+    // ==================== Python 代码安全校验 ====================
+
+    /**
+     * Python 代码安全校验配置。
+     * 用于 runPythonCode 接口，在执行前对代码做静态分析，拦截危险模块与方法。
+     */
+    private PythonSecurity pythonSecurity = new PythonSecurity();
+
+    /**
+     * Python 代码安全校验的嵌套配置项。
+     * 默认拦截：shutil/subprocess/ctypes 等危险模块导入，
+     * 以及 os.system、subprocess.run、shutil.rmtree、eval、exec、__import__ 等危险调用。
+     */
+    @Data
+    public static class PythonSecurity {
+        /** 是否启用 Python 代码安全校验（默认 true） */
+        private boolean enabled = true;
+
+        /** Python 代码最大长度（字符数），默认 100KB，防止超大代码攻击 */
+        private int maxCodeLength = 100 * 1024;
+
+        /** 追加禁用的模块名（顶级模块名），与默认黑名单合并生效 */
+        private List<String> extraBlockedModules = new ArrayList<>();
+
+        /** 追加禁用的内置函数名（与默认黑名单合并） */
+        private List<String> extraBlockedFunctions = new ArrayList<>();
+
+        /** 追加禁用的方法调用，格式为 module.func（与默认黑名单合并） */
+        private List<String> extraBlockedCalls = new ArrayList<>();
+    }
 }

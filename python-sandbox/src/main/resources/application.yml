@@ -28,6 +28,14 @@ sandbox:
   docker-tls-verify: ${DOCKER_TLS_VERIFY:false}  # 是否启用 TLS 验证
   docker-api-version: ${DOCKER_API_VERSION:}     # Docker API 版本号，留空使用默认版本
 
+  # Python 代码安全校验（runPythonCode 接口）
+  python-security:
+    enabled: ${SANDBOX_PYTHON_SECURITY_ENABLED:true}               # 是否启用 Python 代码静态安全校验
+    max-code-length: ${SANDBOX_PYTHON_CODE_MAX_LENGTH:102400}      # Python 代码最大长度（字符数），默认 100KB
+    extra-blocked-modules: ${SANDBOX_PYTHON_BLOCKED_MODULES:}      # 追加禁用的模块名（逗号分隔），与默认黑名单合并
+    extra-blocked-functions: ${SANDBOX_PYTHON_BLOCKED_FUNCS:}      # 追加禁用的内置函数名（逗号分隔），与默认黑名单合并
+    extra-blocked-calls: ${SANDBOX_PYTHON_BLOCKED_CALLS:}          # 追加禁用的方法调用（逗号分隔，格式为 module.func），与默认黑名单合并
+
 logging:
   level:
     io.github.sandbox: INFO

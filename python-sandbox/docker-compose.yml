@@ -21,6 +21,12 @@ services:
       - SANDBOX_CONTAINER_MEMORY_LIMIT=${SANDBOX_CONTAINER_MEMORY_LIMIT:-536870912}
       # 本地 Docker 默认 unix socket；远程 Docker 时可在 .env 中覆盖为 tcp://host:2375
       - DOCKER_HOST=${DOCKER_HOST:-unix:///var/run/docker.sock}
+      # ---- Python 代码安全校验（作用于 /exec/python 接口） ----
+      - SANDBOX_PYTHON_SECURITY_ENABLED=${SANDBOX_PYTHON_SECURITY_ENABLED:-true}
+      - SANDBOX_PYTHON_CODE_MAX_LENGTH=${SANDBOX_PYTHON_CODE_MAX_LENGTH:-102400}
+      - SANDBOX_PYTHON_BLOCKED_MODULES=${SANDBOX_PYTHON_BLOCKED_MODULES:-}
+      - SANDBOX_PYTHON_BLOCKED_FUNCS=${SANDBOX_PYTHON_BLOCKED_FUNCS:-}
+      - SANDBOX_PYTHON_BLOCKED_CALLS=${SANDBOX_PYTHON_BLOCKED_CALLS:-}
     volumes:
       # 默认挂载本地 Docker socket；使用远程 Docker（DOCKER_HOST=tcp://...）时请注释/删除本行
       - /var/run/docker.sock:/var/run/docker.sock

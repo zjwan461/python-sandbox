@@ -43,12 +43,14 @@ import java.util.concurrent.TimeUnit;
 public class SandboxService {
 
     private final SandboxConfig config;
+    private final PythonCodeValidator pythonCodeValidator;
     private final Map<String, SandboxSession> sessions = new ConcurrentHashMap<>();
     private DockerClient dockerClient;
     public static final String DEFAULT_SESSION_ID = "default";
 
-    public SandboxService(SandboxConfig config) {
+    public SandboxService(SandboxConfig config, PythonCodeValidator pythonCodeValidator) {
         this.config = config;
+        this.pythonCodeValidator = pythonCodeValidator;
     }
 
     @PostConstruct
@@ -206,12 +208,16 @@ public class SandboxService {
             throw new SandboxException("DOCKER_ERROR", "Failed to exec command: " + e.getLocalizedMessage(), e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new SandboxException("INTERRUPTED", "Command interrupted", e);
+            throw new SandboxException("INTERRUPTED", "Command interrupted: " + e.getLocalizedMessage(), e);
         }
     }
 
     public CommandResult runPythonCode(String sessionId, String code) {
         SandboxSession session = getSession(sessionId);
+
+        // 在写入容器前先做静态安全校验，避免危险代码进入沙箱
+        pythonCodeValidator.validate(code);
+
         String tmpFile = "/tmp/sandbox_" + System.currentTimeMillis() + ".py";
 
         writeFile(sessionId, tmpFile, code);
