@@ -1,3 +1,8 @@
+import os
+
+# 1. 指定GPU，例如只用物理卡1
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
 import torch
 import os
 from datasets import load_dataset
@@ -93,13 +98,14 @@ training_args = TrainingArguments(
     learning_rate=LR,
     num_train_epochs=EPOCHS,
     logging_steps=10,
-    evaluation_strategy="epoch",
+    eval_strategy="epoch",
     save_strategy="epoch",
     fp16=False,
     bf16=True,
     optim="paged_adamw_8bit",
     report_to="none",
-    # OOM时打开：gradient_checkpointing=True
+    # OOM时打开
+    # gradient_checkpointing=True,
 )
 
 # SFTConfig 只保留SFT专属参数
