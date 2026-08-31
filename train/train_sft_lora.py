@@ -108,11 +108,6 @@ training_args = TrainingArguments(
     # gradient_checkpointing=True,
 )
 
-# SFTConfig 只保留SFT专属参数
-sft_config_dict = {
-    "dataset_text_field": "text",
-    "processing_class": tokenizer, # ✅ tokenizer放到这里
-}
 
 trainer = SFTTrainer(
     model=model,
@@ -120,7 +115,6 @@ trainer = SFTTrainer(
     eval_dataset=val_ds,
     peft_config=lora_config,
     args=training_args,  # TrainingArguments实例
-    sft_config=sft_config_dict,  # SFTConfig实例
     max_seq_length=MAX_SEQ_LENGTH,
 )
 # --------------------------------------------------------------
