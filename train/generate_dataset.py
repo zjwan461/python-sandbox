@@ -9,11 +9,11 @@ import openai
 # ========== 配置区 ==========
 load_dotenv()
 # 百炼API Key，从.env读取
-DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY")
+MODEL_API_KEY = os.getenv("MODEL_API_KEY")
 # 百炼兼容OpenAI接口地址
-BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+BASE_URL = os.getenv("BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
 # 模型，可改为 qwen‑plus、qwen‑turbo 等
-MODEL_NAME = "qwen-plus"
+MODEL_NAME = os.getenv("MODEL_NAME", "qwen3.7-plus")
 
 # 输出目录
 OUTPUT_DIR = Path("./datasets")
@@ -60,7 +60,7 @@ PROMPT_HARD_NEGATIVE = """
 # 初始化目录
 OUTPUT_DIR.mkdir(exist_ok=True)
 
-client = openai.OpenAI(api_key=DASHSCOPE_API_KEY, base_url=BASE_URL)
+client = openai.OpenAI(api_key=MODEL_API_KEY, base_url=BASE_URL)
 
 
 def llm_call(prompt: str) -> str | None:
@@ -72,6 +72,7 @@ def llm_call(prompt: str) -> str | None:
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.7,
                 max_tokens=1024,
+                extra_body={"enable_thinking": False},
             )
             content = resp.choices[0].message.content.strip()
             return content
@@ -136,8 +137,8 @@ def split_dataset(raw_path: Path, train_rate=0.8, val_rate=0.1, test_rate=0.1):
 
 
 if __name__ == "__main__":
-    if not DASHSCOPE_API_KEY:
-        raise RuntimeError("请配置 DASHSCOPE_API_KEY 环境变量，在 .env 文件")
+    if not MODEL_API_KEY:
+        raise RuntimeError("请配置 MODEL_API_KEY 环境变量，在 .env 文件")
 
     with open(OUTPUT_RAW, "w", encoding="utf-8") as f_out:
         print(f"\n==== 开始生成 DANGEROUS 样本 count={COUNT_DANGEROUS} ====")
