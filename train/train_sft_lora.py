@@ -58,6 +58,10 @@ lora_config = LoraConfig(
     task_type="CAUSAL_LM",
 )
 
+print("开始加载tokenizer")
+tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=True)
+tokenizer.pad_token = tokenizer.eos_token
+tokenizer.padding_side = "right"
 
 # Prompt模板，严格固定
 def format_prompt(sample):
@@ -68,24 +72,32 @@ def format_prompt(sample):
 {sample['output']}"""
     return {"text": prompt}
 
+def tokenizer_format_prompt(sample):
+    prompt_text = format_prompt(sample)["text"]
+    out = tokenizer(
+        prompt_text,
+        truncation=True,        # 超过就截断
+        padding="max_length",   # 不足强制pad到MAX_SEQ_LENGTH
+        max_length=MAX_SEQ_LENGTH,
+    )
+    out["labels"] = out["input_ids"].copy()
+    return out
 
+print("开始加载数据集")
 # ====================== 加载数据与模型 ======================
 dataset = load_dataset(
     "json", data_files={"train": TRAIN_DATA_PATH, "val": VAL_DATA_PATH}
 )
-train_ds = dataset["train"].map(format_prompt)
-val_ds = dataset["val"].map(format_prompt)
 
-tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=True)
-tokenizer.pad_token = tokenizer.eos_token
-tokenizer.padding_side = "right"
+train_ds = dataset["train"].map(tokenizer_format_prompt, batched=False) # 如果开启batched, 必须用tokenizer_format_prompt
+val_ds = dataset["val"].map(tokenizer_format_prompt, batched=False)
 
 model = AutoModelForCausalLM.from_pretrained(
     BASE_MODEL,
     quantization_config=bnb_config,
     device_map="auto",
     trust_remote_code=True,
-    torch_dtype=torch.bfloat16,
+    dtype=torch.bfloat16,
 )
 model.config.use_cache = False
 
@@ -93,6 +105,7 @@ model.config.use_cache = False
 # 通用训练参数放到 TrainingArguments
 training_args = TrainingArguments(
     output_dir=OUTPUT_DIR,
+    overwrite_output_dir=True,
     per_device_train_batch_size=BATCH_SIZE,
     gradient_accumulation_steps=GRAD_ACCUM,
     learning_rate=LR,
@@ -100,8 +113,7 @@ training_args = TrainingArguments(
     logging_steps=10,
     eval_strategy="epoch",
     save_strategy="epoch",
-    fp16=True,
-    bf16=False,
+    bf16=True,
     optim="paged_adamw_8bit",
     report_to="none",
     # OOM时打开

@@ -1,0 +1,37 @@
+[project]
+name = "code-danger-model-train"
+version = "0.1.0"
+description = "Code security risk detection LORA training"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "torch==2.11.0",
+    "torchvision==0.26.0",
+    "torchaudio==2.11.0",
+    "transformers==4.57.2",
+    "peft==0.19.1",
+    "trl==1.6.0",
+    "accelerate==1.12.0",
+    "huggingface_hub[hf_xet]==0.36.2",
+    "fastapi==0.121.1",
+    "uvicorn==0.34.0",
+    "scikit-learn==1.5.2",
+    "safetensors>=0.4.5",
+]
+
+[project.optional-dependencies]
+# Windows训练阶段不要启用infer，vllm windows原生支持很差
+infer = [
+    "vllm==0.23.0",
+]
+
+# 定义pytorch cu128索引，explicit=true：只有被sources绑定的包才会访问该源
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+# 将torch系列包绑定到上面cu128索引；其余包全部走pypi官方源
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
+torchaudio = { index = "pytorch-cu128" }
