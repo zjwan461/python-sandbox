@@ -109,9 +109,9 @@ training_args = TrainingArguments(
 )
 
 # SFTConfig 只保留SFT专属参数
-sft_config = SFTConfig(
-    dataset_text_field="text",
-)
+sft_config_dict = {
+    "dataset_text_field": "text",
+}
 
 trainer = SFTTrainer(
     model=model,
@@ -120,7 +120,7 @@ trainer = SFTTrainer(
     peft_config=lora_config,
     tokenizer=tokenizer,
     args=training_args,  # TrainingArguments实例
-    sft_config=sft_config,  # SFTConfig实例
+    sft_config=sft_config_dict,  # SFTConfig实例
     max_seq_length=MAX_SEQ_LENGTH,
 )
 # --------------------------------------------------------------
