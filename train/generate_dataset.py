@@ -72,7 +72,10 @@ def llm_call(prompt: str) -> str | None:
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.7,
                 max_tokens=1024,
-                extra_body={"enable_thinking": False},
+                extra_body={
+                    "enable_thinking": False,
+                    "chat_template_kwargs": {"enable_thinking": False},
+                },
             )
             content = resp.choices[0].message.content.strip()
             return content
