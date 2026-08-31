@@ -1,10 +1,11 @@
 import os
 import json
-import time
+import asyncio
 import random
 from pathlib import Path
+from datetime import datetime
 from dotenv import load_dotenv
-import openai
+from openai import AsyncOpenAI
 
 # ========== 配置区 ==========
 load_dotenv()
@@ -14,21 +15,20 @@ MODEL_API_KEY = os.getenv("MODEL_API_KEY")
 BASE_URL = os.getenv("BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
 # 模型，可改为 qwen‑plus、qwen‑turbo 等
 MODEL_NAME = os.getenv("MODEL_NAME", "qwen3.7-plus")
-
+# 并发信号量，从环境变量读取，默认20
+SEMAPHORE_VALUE = int(os.getenv("SEMAPHORE_VALUE", 20))
 # 输出目录
 OUTPUT_DIR = Path("./datasets")
 OUTPUT_RAW = OUTPUT_DIR / "raw_generated.jsonl"
 TRAIN_PATH = OUTPUT_DIR / "train.jsonl"
 VAL_PATH = OUTPUT_DIR / "val.jsonl"
 TEST_PATH = OUTPUT_DIR / "test.jsonl"
-
 # 生成样本数量
 COUNT_DANGEROUS = 1200  # 危险真实操作样本 DANGEROUS
 COUNT_SAFE_NORMAL = 1200  # 普通安全业务样本 SAFE
 COUNT_HARD_NEG = 1000  # Hard‑Negative迷惑样本（注释/字符串，SAFE）
-
-# 请求并发控制
-SLEEP_SEC = 1.2  # 每次请求间隔，防止QPS超限
+# 请求重试控制
+SLEEP_SEC = 1.2  # 基础休眠
 MAX_RETRY = 3  # 失败重试次数
 
 # SFT固定Instruction模板，和训练脚本保持完全一致
@@ -41,12 +41,10 @@ PROMPT_DANGEROUS = """
 技巧：可以使用变量传递危险参数、字符串拼接参数，不要全部写死字面量。
 要求：只输出代码，不要解释，不要输出完整可直接利用的恶意程序。
 """
-
 PROMPT_SAFE_NORMAL = """
 生成一段普通业务Python/Shell代码片段（5‑30行），仅做正常业务逻辑，**不存在任何高危系统操作**，不调用删除文件、命令执行等危险API。
 只输出代码片段，不要多余解释。
 """
-
 PROMPT_HARD_NEGATIVE = """
 生成一段代码片段（5‑30行），代码里面出现看起来危险的命令字符串，**但是代码绝对不会实际执行危险操作**。
 可选形式：
@@ -57,54 +55,104 @@ PROMPT_HARD_NEGATIVE = """
 """
 # ============================
 
-# 初始化目录
-OUTPUT_DIR.mkdir(exist_ok=True)
 
-client = openai.OpenAI(api_key=MODEL_API_KEY, base_url=BASE_URL)
-
-
-def llm_call(prompt: str) -> str | None:
-    """调用百炼API，带重试"""
-    for attempt in range(MAX_RETRY):
-        try:
-            resp = client.chat.completions.create(
-                model=MODEL_NAME,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.7,
-                max_tokens=1024,
-                extra_body={
-                    "enable_thinking": False,
-                    "chat_template_kwargs": {"enable_thinking": False},
-                },
-            )
-            content = resp.choices[0].message.content.strip()
-            return content
-        except Exception as e:
-            print(f"[WARN] request failed attempt {attempt+1}/{MAX_RETRY}: {str(e)}")
-            time.sleep(SLEEP_SEC * (attempt + 1))
-    return None
+def backup_old_dataset_if_exists(base_dir: Path):
+    """如果旧数据集目录存在，按时间戳重命名备份"""
+    if base_dir.exists():
+        ts_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_dir = Path(f"{base_dir}_{ts_str}")
+        print(f"检测到旧数据集目录 {base_dir}，备份为 → {backup_dir}")
+        base_dir.rename(backup_dir)
+    base_dir.mkdir(exist_ok=True)
 
 
-def generate_one_sample(gen_prompt: str, true_label: str) -> dict | None:
-    """生成单条SFT样本"""
-    code_snippet = llm_call(gen_prompt)
-    if not code_snippet:
+client = AsyncOpenAI(api_key=MODEL_API_KEY, base_url=BASE_URL)
+
+
+async def llm_call(prompt: str, sem: asyncio.Semaphore) -> str | None:
+    """异步调用百炼API，带信号量限流 + 重试，失败返回None"""
+    async with sem:
+        for attempt in range(MAX_RETRY):
+            try:
+                resp = await client.chat.completions.create(
+                    model=MODEL_NAME,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.7,
+                    max_tokens=1024,
+                    extra_body={
+                        "enable_thinking": False,
+                        # 注意：chat_template_kwargs 仅vLLM本地部署才需要，dashscope云端不识别，如需vLLM部署再打开
+                        # "chat_template_kwargs": {"enable_thinking": False},
+                    },
+                )
+                content = resp.choices[0].message.content.strip()
+                return content
+            except Exception as e:
+                print(
+                    f"[WARN] request failed attempt {attempt+1}/{MAX_RETRY}: {str(e)}"
+                )
+                await asyncio.sleep(SLEEP_SEC * (attempt + 1))
+        # 全部重试耗尽，返回None，上层直接跳过该样本
         return None
+
+
+async def generate_one_sample(gen_prompt: str, true_label: str, sem: asyncio.Semaphore):
+    """返回 (item:dict|None, is_success:bool)"""
+    code_snippet = await llm_call(gen_prompt, sem)
+    if not code_snippet:
+        return None, False
     item = {"instruction": INSTRUCTION_TPL, "input": code_snippet, "output": true_label}
-    return item
+    return item, True
 
 
-def batch_generate(total_cnt: int, prompt: str, label: str, out_file):
-    """批量生成，写入raw jsonl"""
+async def batch_generate(
+    total_cnt: int, prompt: str, label: str, sem: asyncio.Semaphore, out_file_path: Path
+):
+    """
+    并发批量生成，单个失败直接跳过
+    返回统计: {"target": int, "total_req": int, "success": int, "fail": int}
+    """
     success = 0
-    while success < total_cnt:
-        sample = generate_one_sample(prompt, label)
-        if sample is not None:
+    total_req = 0
+    tasks = []
+
+    async def task_wrapper():
+        nonlocal success, total_req
+        total_req += 1
+        sample, ok = await generate_one_sample(prompt, label, sem)
+        if ok and sample is not None:
             line = json.dumps(sample, ensure_ascii=False)
-            out_file.write(line + "\n")
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(
+                None,
+                lambda: open(out_file_path, "a", encoding="utf-8").write(line + "\n"),
+            )
             success += 1
             print(f"[{label}] progress: {success}/{total_cnt}")
-        time.sleep(SLEEP_SEC)
+        else:
+            print(f"[{label}] sample skip, total_req={total_req}")
+
+    while total_req < total_cnt:
+        running = len([t for t in tasks if not t.done()])
+        if running < SEMAPHORE_VALUE:
+            t = asyncio.create_task(task_wrapper())
+            tasks.append(t)
+        else:
+            await asyncio.sleep(0.05)
+
+    await asyncio.gather(*tasks, return_exceptions=True)
+    fail = total_req - success
+    stat = {
+        "label": label,
+        "target": total_cnt,
+        "total_req": total_req,
+        "success": success,
+        "fail": fail,
+    }
+    print(
+        f"[{label}] batch done | target:{total_cnt}, total_req:{total_req}, success:{success}, fail:{fail}"
+    )
+    return stat
 
 
 def split_dataset(raw_path: Path, train_rate=0.8, val_rate=0.1, test_rate=0.1):
@@ -120,7 +168,6 @@ def split_dataset(raw_path: Path, train_rate=0.8, val_rate=0.1, test_rate=0.1):
     total = len(all_lines)
     n_train = int(total * train_rate)
     n_val = int(total * val_rate)
-
     train_lines = all_lines[:n_train]
     val_lines = all_lines[n_train : n_train + n_val]
     test_lines = all_lines[n_train + n_val :]
@@ -137,23 +184,70 @@ def split_dataset(raw_path: Path, train_rate=0.8, val_rate=0.1, test_rate=0.1):
     print(f"  train: {len(train_lines)} → {TRAIN_PATH}")
     print(f"  val:   {len(val_lines)} → {VAL_PATH}")
     print(f"  test:  {len(test_lines)} → {TEST_PATH}")
+    return len(train_lines), len(val_lines), len(test_lines)
 
 
-if __name__ == "__main__":
+async def main():
     if not MODEL_API_KEY:
         raise RuntimeError("请配置 MODEL_API_KEY 环境变量，在 .env 文件")
 
-    with open(OUTPUT_RAW, "w", encoding="utf-8") as f_out:
-        print(f"\n==== 开始生成 DANGEROUS 样本 count={COUNT_DANGEROUS} ====")
-        batch_generate(COUNT_DANGEROUS, PROMPT_DANGEROUS, "DANGEROUS", f_out)
+    backup_old_dataset_if_exists(OUTPUT_DIR)
 
-        print(f"\n==== 开始生成 SAFE‑NORMAL 样本 count={COUNT_SAFE_NORMAL} ====")
-        batch_generate(COUNT_SAFE_NORMAL, PROMPT_SAFE_NORMAL, "SAFE", f_out)
+    # 初始化raw空文件
+    with open(OUTPUT_RAW, "w", encoding="utf-8") as f:
+        pass
 
-        print(f"\n==== 开始生成 HARD‑NEGATIVE 迷惑样本 count={COUNT_HARD_NEG} ====")
-        batch_generate(COUNT_HARD_NEG, PROMPT_HARD_NEGATIVE, "SAFE", f_out)
+    sem = asyncio.Semaphore(SEMAPHORE_VALUE)
+    print(f"并发信号量 SEMAPHORE_VALUE = {SEMAPHORE_VALUE}")
+
+    stats_list = []
+
+    print(f"\n==== 开始生成 DANGEROUS 样本 count={COUNT_DANGEROUS} ====")
+    s1 = await batch_generate(
+        COUNT_DANGEROUS, PROMPT_DANGEROUS, "DANGEROUS", sem, OUTPUT_RAW
+    )
+    stats_list.append(s1)
+
+    print(f"\n==== 开始生成 SAFE‑NORMAL 样本 count={COUNT_SAFE_NORMAL} ====")
+    s2 = await batch_generate(
+        COUNT_SAFE_NORMAL, PROMPT_SAFE_NORMAL, "SAFE_NORMAL", sem, OUTPUT_RAW
+    )
+    stats_list.append(s2)
+
+    print(f"\n==== 开始生成 HARD‑NEGATIVE 迷惑样本 count={COUNT_HARD_NEG} ====")
+    s3 = await batch_generate(
+        COUNT_HARD_NEG, PROMPT_HARD_NEGATIVE, "HARD_NEG", sem, OUTPUT_RAW
+    )
+    stats_list.append(s3)
 
     print(f"\nRaw dataset finished: {OUTPUT_RAW}")
-    # 切分数据集
-    split_dataset(OUTPUT_RAW)
+    train_cnt, val_cnt, test_cnt = split_dataset(OUTPUT_RAW)
+
+    # ========== 输出最终 Report ==========
+    print("\n" + "=" * 60)
+    print("FINAL GENERATION REPORT")
+    print("=" * 60)
+    total_target = 0
+    total_req_all = 0
+    total_success_all = 0
+    total_fail_all = 0
+    for st in stats_list:
+        print(
+            f"[{st['label']:14s}] target={st['target']:4d} | req={st['total_req']:4d} | success={st['success']:4d} | fail={st['fail']:4d}"
+        )
+        total_target += st["target"]
+        total_req_all += st["total_req"]
+        total_success_all += st["success"]
+        total_fail_all += st["fail"]
+
+    print("-" * 60)
+    print(
+        f"{'TOTAL':14s} target={total_target:4d} | req={total_req_all:4d} | success={total_success_all:4d} | fail={total_fail_all:4d}"
+    )
+    print(f"After split: train={train_cnt}, val={val_cnt}, test={test_cnt}")
+    print("=" * 60)
     print("All done!")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
