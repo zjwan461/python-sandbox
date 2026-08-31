@@ -30,11 +30,9 @@ COUNT_HARD_NEG = 1000  # Hard‑Negative迷惑样本（注释/字符串，SAFE�
 # 请求重试控制
 SLEEP_SEC = 1.2  # 基础休眠
 MAX_RETRY = 3  # 失败重试次数
-
 # SFT固定Instruction模板，和训练脚本保持完全一致
 INSTRUCTION_TPL = """判断下面代码片段是否包含危险违规系统操作：删除系统核心文件、修改系统关键配置、执行恶意系统命令、反弹shell、篡改权限。
 只输出 DANGEROUS 或者 SAFE，不要多余解释。"""
-
 # 生成Prompt模板
 PROMPT_DANGEROUS = """
 请生成简短Python或者Shell代码片段（5‑30行），代码**真实包含危险违规系统操作**：删除系统核心文件、修改系统配置、执行系统命令、反弹shell、篡改文件权限。
@@ -64,6 +62,33 @@ def backup_old_dataset_if_exists(base_dir: Path):
         print(f"检测到旧数据集目录 {base_dir}，备份为 → {backup_dir}")
         base_dir.rename(backup_dir)
     base_dir.mkdir(exist_ok=True)
+
+
+def validate_sample_item(item: dict) -> tuple[bool, str]:
+    """
+    校验生成样本是否符合训练数据集格式
+    返回 (is_valid: bool, msg: str)
+    """
+    required_keys = ("instruction", "input", "output")
+    for k in required_keys:
+        if k not in item:
+            return False, f"缺失字段 {k}"
+        v = item[k]
+        if not isinstance(v, str) or len(v.strip()) == 0:
+            return False, f"字段 {k} 为空或者非字符串"
+
+    # output标签只能二选一
+    allowed_labels = {"DANGEROUS", "SAFE"}
+    output_label = item["output"].strip()
+    if output_label not in allowed_labels:
+        return False, f"非法output标签: {output_label}, 允许值 {allowed_labels}"
+
+    # input代码片段长度过滤，防止模型输出空/极短垃圾内容
+    code_input = item["input"].strip()
+    if len(code_input) < 10:
+        return False, f"input代码片段过短，length={len(code_input)}"
+
+    return True, "ok"
 
 
 client = AsyncOpenAI(api_key=MODEL_API_KEY, base_url=BASE_URL)
@@ -97,11 +122,18 @@ async def llm_call(prompt: str, sem: asyncio.Semaphore) -> str | None:
 
 
 async def generate_one_sample(gen_prompt: str, true_label: str, sem: asyncio.Semaphore):
-    """返回 (item:dict|None, is_success:bool)"""
+    """返回 (item:dict|None, is_success:bool)，增加格式校验"""
     code_snippet = await llm_call(gen_prompt, sem)
     if not code_snippet:
         return None, False
+
     item = {"instruction": INSTRUCTION_TPL, "input": code_snippet, "output": true_label}
+    # 执行格式校验
+    valid, msg = validate_sample_item(item)
+    if not valid:
+        print(f"[WARN] sample format invalid, skip. reason={msg}")
+        return None, False
+
     return item, True
 
 
@@ -139,7 +171,6 @@ async def batch_generate(
             tasks.append(t)
         else:
             await asyncio.sleep(0.05)
-
     await asyncio.gather(*tasks, return_exceptions=True)
     fail = total_req - success
     stat = {
@@ -190,39 +221,30 @@ def split_dataset(raw_path: Path, train_rate=0.8, val_rate=0.1, test_rate=0.1):
 async def main():
     if not MODEL_API_KEY:
         raise RuntimeError("请配置 MODEL_API_KEY 环境变量，在 .env 文件")
-
     backup_old_dataset_if_exists(OUTPUT_DIR)
-
     # 初始化raw空文件
     with open(OUTPUT_RAW, "w", encoding="utf-8") as f:
         pass
-
     sem = asyncio.Semaphore(SEMAPHORE_VALUE)
     print(f"并发信号量 SEMAPHORE_VALUE = {SEMAPHORE_VALUE}")
-
     stats_list = []
-
     print(f"\n==== 开始生成 DANGEROUS 样本 count={COUNT_DANGEROUS} ====")
     s1 = await batch_generate(
         COUNT_DANGEROUS, PROMPT_DANGEROUS, "DANGEROUS", sem, OUTPUT_RAW
     )
     stats_list.append(s1)
-
     print(f"\n==== 开始生成 SAFE‑NORMAL 样本 count={COUNT_SAFE_NORMAL} ====")
     s2 = await batch_generate(
         COUNT_SAFE_NORMAL, PROMPT_SAFE_NORMAL, "SAFE_NORMAL", sem, OUTPUT_RAW
     )
     stats_list.append(s2)
-
     print(f"\n==== 开始生成 HARD‑NEGATIVE 迷惑样本 count={COUNT_HARD_NEG} ====")
     s3 = await batch_generate(
         COUNT_HARD_NEG, PROMPT_HARD_NEGATIVE, "HARD_NEG", sem, OUTPUT_RAW
     )
     stats_list.append(s3)
-
     print(f"\nRaw dataset finished: {OUTPUT_RAW}")
     train_cnt, val_cnt, test_cnt = split_dataset(OUTPUT_RAW)
-
     # ========== 输出最终 Report ==========
     print("\n" + "=" * 60)
     print("FINAL GENERATION REPORT")
@@ -239,7 +261,6 @@ async def main():
         total_req_all += st["total_req"]
         total_success_all += st["success"]
         total_fail_all += st["fail"]
-
     print("-" * 60)
     print(
         f"{'TOTAL':14s} target={total_target:4d} | req={total_req_all:4d} | success={total_success_all:4d} | fail={total_fail_all:4d}"
