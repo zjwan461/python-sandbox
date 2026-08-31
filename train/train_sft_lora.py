@@ -115,7 +115,6 @@ trainer = SFTTrainer(
     eval_dataset=val_ds,
     peft_config=lora_config,
     args=training_args,  # TrainingArguments实例
-    max_seq_length=MAX_SEQ_LENGTH,
 )
 # --------------------------------------------------------------
 
