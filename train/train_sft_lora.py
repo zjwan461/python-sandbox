@@ -5,6 +5,7 @@ from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     BitsAndBytesConfig,
+    TrainingArguments,  # 新增导入
 )
 from peft import LoraConfig, PeftModel
 from trl import SFTTrainer, SFTConfig
@@ -17,15 +18,15 @@ VAL_DATA_PATH = "./datasets/val.jsonl"
 OUTPUT_DIR = "./output/code-danger-lora"
 MERGED_MODEL_DIR = "./output/code-danger-merged-full"  # 合并之后完整模型输出目录
 """
-GPU 型号	显存	MAX_SEQ_LENGTH	BATCH_SIZE	GRAD_ACCUM	总有效 Batch	状态备注
-RTX 5060Ti 16G	16GB	1536	4	4	16	✅舒适；1.5B 非常宽松；尝试 7B 模型建议降到 BATCH_SIZE=2，GRAD_ACCUM=4
-RTX 5080 16G	16GB	1536‑2048	4‑6	4	16‑24	✅舒适；seq 拉到 2048 也可跑
-RTX 5090D 32G	32GB	2048‑4096	8	4	32	✅非常宽松；1.5B 可以大胆开大 seq；也可以直接跑 7B QLoRA
-L20 48G	48GB	4096	12‑16	2	24‑32	✅工作站；可以直接 7B/14B QLoRA 微调
-RTX4090 /4090D 24G	24G	2048	6	4	24	✅舒适
-RTX4070Ti‑Super 16G	16G	1536	4	4	16	✅同 5060Ti‑16G
-RTX4060Ti 16G	16G	1536	4	4	16	✅
-RTX4060 8G	8G	1024	2	4	8	⚠️偏紧；建议开启梯度检查点 gradient_checkpointing=True
+GPU 型号    显存    MAX_SEQ_LENGTH  BATCH_SIZE  GRAD_ACCUM  总有效 Batch    状态备注
+RTX 5060Ti 16G  16GB      1536      4     4     16  ✅舒适；1.5B 非常宽松；尝试 7B 模型建议降到 BATCH_SIZE=2，GRAD_ACCUM=4
+RTX 5080 16G    16GB      1536‑2048   4‑6  4     16‑24   ✅舒适；seq 拉到 2048 也可跑
+RTX 5090D 32G   32GB      2048‑4096   8     4     32  ✅非常宽松；1.5B 可以大胆开大 seq；也可以直接跑 7B QLoRA
+L20 48G 48GB    4096      12‑16   2     24‑32   ✅工作站；可以直接 7B/14B QLoRA 微调
+RTX4090 /4090D 24G  24G 2048      6     4     24  ✅舒适
+RTX4070Ti‑Super 16G 16G 1536      4     4     16  ✅同 5060Ti‑16G
+RTX4060Ti 16G   16G 1536      4     4     16  ✅
+RTX4060 8G  8G  1024      2     4     8   ⚠️偏紧；建议开启梯度检查点 gradient_checkpointing=True
 """
 MAX_SEQ_LENGTH = 1536
 BATCH_SIZE = 4
@@ -83,8 +84,9 @@ model = AutoModelForCausalLM.from_pretrained(
 )
 model.config.use_cache = False
 
-# TRL v1.x 使用 SFTConfig
-sft_config = SFTConfig(
+# -------------------------- 修复部分 --------------------------
+# 通用训练参数放到 TrainingArguments
+training_args = TrainingArguments(
     output_dir=OUTPUT_DIR,
     per_device_train_batch_size=BATCH_SIZE,
     gradient_accumulation_steps=GRAD_ACCUM,
@@ -97,6 +99,11 @@ sft_config = SFTConfig(
     bf16=True,
     optim="paged_adamw_8bit",
     report_to="none",
+    # OOM时打开：gradient_checkpointing=True
+)
+
+# SFTConfig 只保留SFT专属参数
+sft_config = SFTConfig(
     max_seq_length=MAX_SEQ_LENGTH,
     dataset_text_field="text",
 )
@@ -107,8 +114,10 @@ trainer = SFTTrainer(
     eval_dataset=val_ds,
     peft_config=lora_config,
     tokenizer=tokenizer,
-    args=sft_config,
+    args=training_args,  # TrainingArguments实例
+    sft_config=sft_config,  # SFTConfig实例
 )
+# --------------------------------------------------------------
 
 
 def merge_lora_to_base(
@@ -132,7 +141,6 @@ def merge_lora_to_base(
     lora_model = PeftModel.from_pretrained(base_model, lora_adapter_dir)
     # 执行合并并且卸载peft包装，得到原生transformers模型
     merged_model = lora_model.merge_and_unload()
-
     # 保存完整模型 + tokenizer
     merged_model.save_pretrained(output_merged_dir, safe_serialization=True)
     tokenizer.save_pretrained(output_merged_dir)
