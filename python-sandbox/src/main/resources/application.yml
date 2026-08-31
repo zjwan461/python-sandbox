@@ -3,6 +3,32 @@ spring:
     multipart:
       max-file-size: 50MB
       max-request-size: 50MB
+  
+  # 数据源配置
+  datasource:
+    url: ${DB_URL:jdbc:mysql://mysql:3306/sandbox?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  
+# MyBatis-Plus 配置
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
 
 server:
   port: 8080
@@ -35,6 +61,20 @@ sandbox:
     extra-blocked-modules: ${SANDBOX_PYTHON_BLOCKED_MODULES:}      # 追加禁用的模块名（逗号分隔），与默认黑名单合并
     extra-blocked-functions: ${SANDBOX_PYTHON_BLOCKED_FUNCS:}      # 追加禁用的内置函数名（逗号分隔），与默认黑名单合并
     extra-blocked-calls: ${SANDBOX_PYTHON_BLOCKED_CALLS:}          # 追加禁用的方法调用（逗号分隔，格式为 module.func），与默认黑名单合并
+
+# Actuator 监控端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name:python-sandbox}
 
 logging:
   level:
