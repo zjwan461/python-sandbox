@@ -1,8 +1,3 @@
-import os
-
-# 1. 指定GPU，例如只用物理卡1
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-
 import torch
 import os
 from datasets import load_dataset
@@ -14,6 +9,9 @@ from transformers import (
 )
 from peft import LoraConfig, PeftModel
 from trl import SFTTrainer, SFTConfig
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ====================== 配置区 ======================
 # BASE_MODEL = "deepseek-ai/deepseek-coder-1.3b-instruct"
@@ -40,6 +38,7 @@ EPOCHS = 3
 LR = 2e-4
 DO_MERGE_AFTER_TRAIN = True  # 训练结束后是否自动合并LoRA到基座
 
+# Windows 单独安装 bitsandbytes uv pip install --force-reinstall https://github.com/bitsandbytes-foundation/bitsandbytes/releases/download/continuous-release_main/bitsandbytes-1.33.7.preview-py3-none-win_amd64.whl
 # 4bit NF4 量化配置
 bnb_config = BitsAndBytesConfig(
     load_in_4bit=True,

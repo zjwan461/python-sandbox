@@ -16,21 +16,23 @@ dependencies = [
     "uvicorn==0.34.0",
     "scikit-learn==1.5.2",
     "safetensors>=0.4.5",
+    "dotenv>=0.9.9",
 ]
 
 [project.optional-dependencies]
-# Windows训练阶段不要启用infer，vllm windows原生支持很差
 infer = [
     "vllm==0.23.0",
 ]
+# Linux/WSL2 才启用这个extra；Windows不要启用
+linux-train = [
+    "bitsandbytes==0.50.2"
+]
 
-# 定义pytorch cu128索引，explicit=true：只有被sources绑定的包才会访问该源
 [[tool.uv.index]]
 name = "pytorch-cu128"
 url = "https://download.pytorch.org/whl/cu128"
 explicit = true
 
-# 将torch系列包绑定到上面cu128索引；其余包全部走pypi官方源
 [tool.uv.sources]
 torch = { index = "pytorch-cu128" }
 torchvision = { index = "pytorch-cu128" }
