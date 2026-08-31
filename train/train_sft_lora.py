@@ -38,7 +38,6 @@ EPOCHS = 3
 LR = 2e-4
 DO_MERGE_AFTER_TRAIN = True  # 训练结束后是否自动合并LoRA到基座
 
-# Windows 单独安装 bitsandbytes uv pip install --force-reinstall https://github.com/bitsandbytes-foundation/bitsandbytes/releases/download/continuous-release_main/bitsandbytes-1.33.7.preview-py3-none-win_amd64.whl
 # 4bit NF4 量化配置
 bnb_config = BitsAndBytesConfig(
     load_in_4bit=True,

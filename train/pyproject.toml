@@ -17,15 +17,12 @@ dependencies = [
     "scikit-learn==1.5.2",
     "safetensors>=0.4.5",
     "dotenv>=0.9.9",
+    "bitsandbytes>=0.50.2",
 ]
 
 [project.optional-dependencies]
 infer = [
     "vllm==0.23.0",
-]
-# Linux/WSL2 才启用这个extra；Windows不要启用
-linux-train = [
-    "bitsandbytes==0.50.2"
 ]
 
 [[tool.uv.index]]
