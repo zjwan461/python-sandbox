@@ -12,9 +12,9 @@ from trl import SFTTrainer, SFTConfig
 # BASE_MODEL = "deepseek-ai/deepseek-coder-1.3b-instruct"
 BASE_MODEL = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
 
-TRAIN_DATA_PATH = "./train.jsonl"
-VAL_DATA_PATH = "./val.jsonl"
-OUTPUT_DIR = "./code-danger-lora"
+TRAIN_DATA_PATH = "./datasets/train.jsonl"
+VAL_DATA_PATH = "./datasets/val.jsonl"
+OUTPUT_DIR = "./output/code-danger-lora"
 
 MAX_SEQ_LENGTH = 1536
 BATCH_SIZE = 4

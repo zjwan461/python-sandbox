@@ -6,7 +6,6 @@ transformers==4.57.2
 peft==0.19.1
 trl==1.6.0
 bitsandbytes==0.50.2
-datasets==3.6.0
 accelerate==1.12.0
 huggingface-hub==0.36.2
 
