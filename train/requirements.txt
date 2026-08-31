@@ -1,22 +1,18 @@
-# PyTorch 主流稳定，CUDA12.x
-torch==2.5.1
-torchvision==0.20.1
-torchaudio==2.5.1
+torch==2.7.1
+torchvision==0.22.1
+torchaudio==2.7.1
 
-# HuggingFace生态 2026主流稳定
 transformers==4.57.2
 peft==0.19.1
 trl==1.6.0
 bitsandbytes==0.50.2
-datasets==2.22.0
-accelerate==0.35.0
-huggingface-hub==0.37.1
+datasets==3.6.0
+accelerate==1.12.0
+huggingface-hub==0.36.2
 
-# 推理服务
 vllm==0.23.0
 fastapi==0.115.4
 uvicorn==0.32.0
 
-# 评估&工具
 scikit-learn==1.5.2
 safetensors>=0.4.5
