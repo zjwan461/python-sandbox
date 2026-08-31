@@ -2,6 +2,7 @@ import os
 
 # 1. 指定GPU，例如只用物理卡1
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["BNB_DISABLE_CPU_KERNELS"] = "1"
 
 import torch
 import os
@@ -100,8 +101,8 @@ training_args = TrainingArguments(
     logging_steps=10,
     eval_strategy="epoch",
     save_strategy="epoch",
-    fp16=False,
-    bf16=True,
+    fp16=True,
+    bf16=False,
     optim="paged_adamw_8bit",
     report_to="none",
     # OOM时打开
