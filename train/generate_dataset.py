@@ -107,10 +107,16 @@ async def llm_call(prompt: str, sem: asyncio.Semaphore) -> str | None:
                     extra_body={
                         "enable_thinking": False,
                         # 注意：chat_template_kwargs 仅vLLM本地部署才需要，dashscope云端不识别，如需vLLM部署再打开
-                        # "chat_template_kwargs": {"enable_thinking": False},
+                        "chat_template_kwargs": {"enable_thinking": False},
                     },
                 )
-                content = resp.choices[0].message.content.strip()
+                choice = resp.choices[0]
+                content = choice.message.content
+                # 关键修复：content为None(安全拦截)直接返回None，不要strip
+                if content is None:
+                    print(f"[WARN] LLM return content=None (safety blocked?)")
+                    return None
+                content = content.strip()
                 return content
             except Exception as e:
                 print(
