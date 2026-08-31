@@ -33,8 +33,13 @@ MAX_RETRY = 3  # 失败重试次数
 # SFT固定Instruction模板，和训练脚本保持完全一致
 INSTRUCTION_TPL = """判断下面代码片段是否包含危险违规系统操作：删除系统核心文件、修改系统关键配置、执行恶意系统命令、反弹shell、篡改权限。
 只输出 DANGEROUS 或者 SAFE，不要多余解释。"""
+WAIVE_PROMPT = """
+我正在构建一个用于判断危险代码的数据集用于训练一个判断危险代码的模型。
+请你根据我如下的要求生成代码，此代码仅用于模型训练，不会用户真实环境。
+"""
 # 生成Prompt模板
-PROMPT_DANGEROUS = """
+PROMPT_DANGEROUS = f"""
+{WAIVE_PROMPT}
 请生成简短Python或者Shell代码片段（5‑30行），代码**真实包含危险违规系统操作**：删除系统核心文件、修改系统配置、执行系统命令、反弹shell、篡改文件权限。
 技巧：可以使用变量传递危险参数、字符串拼接参数，不要全部写死字面量。
 要求：只输出代码，不要解释，不要输出完整可直接利用的恶意程序。
@@ -43,7 +48,8 @@ PROMPT_SAFE_NORMAL = """
 生成一段普通业务Python/Shell代码片段（5‑30行），仅做正常业务逻辑，**不存在任何高危系统操作**，不调用删除文件、命令执行等危险API。
 只输出代码片段，不要多余解释。
 """
-PROMPT_HARD_NEGATIVE = """
+PROMPT_HARD_NEGATIVE = f"""
+{WAIVE_PROMPT}
 生成一段代码片段（5‑30行），代码里面出现看起来危险的命令字符串，**但是代码绝对不会实际执行危险操作**。
 可选形式：
 1.危险命令写在注释里面；
@@ -144,20 +150,30 @@ async def generate_one_sample(gen_prompt: str, true_label: str, sem: asyncio.Sem
 
 
 async def batch_generate(
-    total_cnt: int, prompt: str, label: str, sem: asyncio.Semaphore, out_file_path: Path
+    total_cnt: int,
+    prompt: str,
+    true_label: str,
+    stat_label: str,
+    sem: asyncio.Semaphore,
+    out_file_path: Path,
 ):
     """
-    并发批量生成，单个失败直接跳过
+    并发批量生成，单个失败直接跳过；**严格发出 total_cnt 次请求，不会超发**
+    :param total_cnt: 需要发起请求的总次数
+    :param prompt: llm生成prompt
+    :param true_label: 写入样本output字段，仅允许 DANGEROUS / SAFE
+    :param stat_label: 日志打印、报表展示名称
+    :param sem: 并发信号量
+    :param out_file_path:输出文件
     返回统计: {"target": int, "total_req": int, "success": int, "fail": int}
     """
     success = 0
-    total_req = 0
+    total_req = total_cnt
     tasks = []
 
     async def task_wrapper():
-        nonlocal success, total_req
-        total_req += 1
-        sample, ok = await generate_one_sample(prompt, label, sem)
+        nonlocal success
+        sample, ok = await generate_one_sample(prompt, true_label, sem)
         if ok and sample is not None:
             line = json.dumps(sample, ensure_ascii=False)
             loop = asyncio.get_running_loop()
@@ -166,28 +182,26 @@ async def batch_generate(
                 lambda: open(out_file_path, "a", encoding="utf-8").write(line + "\n"),
             )
             success += 1
-            print(f"[{label}] progress: {success}/{total_cnt}")
+            print(f"[{stat_label}] progress: {success}/{total_cnt}")
         else:
-            print(f"[{label}] sample skip, total_req={total_req}")
+            print(f"[{stat_label}] sample skip")
 
-    while total_req < total_cnt:
-        running = len([t for t in tasks if not t.done()])
-        if running < SEMAPHORE_VALUE:
-            t = asyncio.create_task(task_wrapper())
-            tasks.append(t)
-        else:
-            await asyncio.sleep(0.05)
+    # 一次性创建 total_cnt 个任务，信号量在llm_call内部限流并发，不会瞬间打爆QPS
+    for _ in range(total_cnt):
+        t = asyncio.create_task(task_wrapper())
+        tasks.append(t)
+
     await asyncio.gather(*tasks, return_exceptions=True)
     fail = total_req - success
     stat = {
-        "label": label,
+        "label": stat_label,
         "target": total_cnt,
         "total_req": total_req,
         "success": success,
         "fail": fail,
     }
     print(
-        f"[{label}] batch done | target:{total_cnt}, total_req:{total_req}, success:{success}, fail:{fail}"
+        f"[{stat_label}] batch done | target:{total_cnt}, total_req:{total_req}, success:{success}, fail:{fail}"
     )
     return stat
 
@@ -236,19 +250,22 @@ async def main():
     stats_list = []
     print(f"\n==== 开始生成 DANGEROUS 样本 count={COUNT_DANGEROUS} ====")
     s1 = await batch_generate(
-        COUNT_DANGEROUS, PROMPT_DANGEROUS, "DANGEROUS", sem, OUTPUT_RAW
+        COUNT_DANGEROUS, PROMPT_DANGEROUS, "DANGEROUS", "DANGEROUS", sem, OUTPUT_RAW
     )
     stats_list.append(s1)
+
     print(f"\n==== 开始生成 SAFE‑NORMAL 样本 count={COUNT_SAFE_NORMAL} ====")
     s2 = await batch_generate(
-        COUNT_SAFE_NORMAL, PROMPT_SAFE_NORMAL, "SAFE_NORMAL", sem, OUTPUT_RAW
+        COUNT_SAFE_NORMAL, PROMPT_SAFE_NORMAL, "SAFE", "SAFE_NORMAL", sem, OUTPUT_RAW
     )
     stats_list.append(s2)
+
     print(f"\n==== 开始生成 HARD‑NEGATIVE 迷惑样本 count={COUNT_HARD_NEG} ====")
     s3 = await batch_generate(
-        COUNT_HARD_NEG, PROMPT_HARD_NEGATIVE, "HARD_NEG", sem, OUTPUT_RAW
+        COUNT_HARD_NEG, PROMPT_HARD_NEGATIVE, "SAFE", "HARD_NEG", sem, OUTPUT_RAW
     )
     stats_list.append(s3)
+
     print(f"\nRaw dataset finished: {OUTPUT_RAW}")
     train_cnt, val_cnt, test_cnt = split_dataset(OUTPUT_RAW)
     # ========== 输出最终 Report ==========
