@@ -2,7 +2,6 @@ import os
 
 # 1. 指定GPU，例如只用物理卡1
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-os.environ["BNB_DISABLE_CPU_KERNELS"] = "1"
 
 import torch
 import os
@@ -111,7 +110,6 @@ training_args = TrainingArguments(
 
 # SFTConfig 只保留SFT专属参数
 sft_config = SFTConfig(
-    max_seq_length=MAX_SEQ_LENGTH,
     dataset_text_field="text",
 )
 
@@ -123,6 +121,7 @@ trainer = SFTTrainer(
     tokenizer=tokenizer,
     args=training_args,  # TrainingArguments实例
     sft_config=sft_config,  # SFTConfig实例
+    max_seq_length=MAX_SEQ_LENGTH,
 )
 # --------------------------------------------------------------
 
