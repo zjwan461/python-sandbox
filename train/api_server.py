@@ -21,7 +21,7 @@ else:
     llm_kwargs = {
         "model": JARVIS_CODER,
         "trust_remote_code": True,
-        "device": "cpu",
+        "device_type": "cpu",
     }
 
 llm = LLM(**llm_kwargs)
