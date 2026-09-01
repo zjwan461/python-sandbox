@@ -72,7 +72,7 @@ def detect(code_snippet: str) -> str:
     pred = out_text.split("###输出：")[-1].strip()
     elapsed_time = time.time() - start_time
     logger.info(f"detect 耗时: {elapsed_time:.3f}s")
-    return "DANGEROUS" if "DANGEROUS" in pred else "SAFE"
+    return pred
 
 
 if __name__ == "__main__":
