@@ -4,7 +4,7 @@ huggingface_hub[hf_xet]
 fastapi==0.121.1
 uvicorn==0.34.0
 
---extra-index-url https://download.pytorch.org/whl/cu121
+--extra-index-url https://download.pytorch.org/whl/cu128
 torch==2.7.0
 torchvision==0.22.0
 torchaudio==2.7.0
