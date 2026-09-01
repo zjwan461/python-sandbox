@@ -1,20 +1,17 @@
 import torch
-from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-BASE_MODEL = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
-LORA_ADAPTER = "./output/jarvis-coder-lora"
+BASE_MODEL = "zjwan461/jarvis-coder"
 
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=True)
 tokenizer.pad_token = tokenizer.eos_token
 
-base_model = AutoModelForCausalLM.from_pretrained(
+model = AutoModelForCausalLM.from_pretrained(
     BASE_MODEL,
-    torch_dtype=torch.bfloat16,
+    dtype=torch.bfloat16,
     device_map="auto",
     trust_remote_code=True
 )
-model = PeftModel.from_pretrained(base_model, LORA_ADAPTER)
 
 PROMPT_TPL = """判断下面代码片段是否包含危险违规系统操作，危险操作包括删除系统核心文件、修改系统关键配置、执行恶意系统命令、创建恶意后门等。只输出DANGEROUS或者SAFE，不要输出多余内容。
 ###代码片段：

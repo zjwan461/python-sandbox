@@ -14,10 +14,6 @@ else:
 app = FastAPI(title="Code Danger Detect Service")
 JARVIS_CODER = "zjwan461/jarvis-coder"
 
-llm = LLM(
-    model=JARVIS_CODER,
-    dtype="bfloat16"
-)
 
 sampling_params = SamplingParams(temperature=0.0, top_p=1.0, max_tokens=10, stop=["\n"])
 
@@ -32,6 +28,14 @@ class DetectReq(BaseModel):
     code: str
 
 
+llm = None
+
+
+def init_llm():
+    global llm
+    llm = LLM(model=JARVIS_CODER, dtype="bfloat16")
+
+
 @app.post("/detect")
 def detect(req: DetectReq):
     prompt = PROMPT_TPL.format(code=req.code)
@@ -43,6 +47,7 @@ def detect(req: DetectReq):
 
 
 if __name__ == "__main__":
+    init_llm()
     import uvicorn
 
     uvicorn.run(app, host="0.0.0.0", port=8000)

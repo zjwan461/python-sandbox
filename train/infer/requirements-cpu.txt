@@ -1,0 +1,7 @@
+vllm-cpu==0.9.1.post2
+transformers==4.51.1
+
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.7.0
+torchvision==0.22.0
+torchaudio==2.7.0
