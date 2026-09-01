@@ -1,5 +1,5 @@
 [project]
-name = "code-danger-model-train"
+name = "jarvis-coder-model-train"
 version = "0.1.0"
 description = "Code security risk detection LORA training"
 requires-python = ">=3.11,<3.13"

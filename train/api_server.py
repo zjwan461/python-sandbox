@@ -5,7 +5,7 @@ from vllm import LLM, SamplingParams
 app = FastAPI(title="Code Danger Detect Service")
 
 BASE_MODEL = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
-LORA_PATH = "./code-danger-lora"
+LORA_PATH = "./jarvis-coder-lora"
 
 llm = LLM(
     model=BASE_MODEL,

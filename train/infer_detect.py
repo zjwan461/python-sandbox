@@ -3,7 +3,7 @@ from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 BASE_MODEL = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
-LORA_ADAPTER = "./output/code-danger-lora"
+LORA_ADAPTER = "./output/jarvis-coder-lora"
 
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=True)
 tokenizer.pad_token = tokenizer.eos_token
