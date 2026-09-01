@@ -16,6 +16,7 @@ JARVIS_CODER = "zjwan461/jarvis-coder"
 
 llm = LLM(
     model=JARVIS_CODER,
+    dtype="bfloat16"
 )
 
 sampling_params = SamplingParams(temperature=0.0, top_p=1.0, max_tokens=10, stop=["\n"])
