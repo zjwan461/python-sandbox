@@ -58,8 +58,7 @@ lora_config = LoraConfig(
 
 print("开始加载tokenizer")
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=True)
-tokenizer.pad_token = tokenizer.eos_token
-tokenizer.padding_side = "right"
+
 
 # Prompt模板，严格固定
 def format_prompt(sample):
@@ -70,16 +69,18 @@ def format_prompt(sample):
 {sample['output']}"""
     return {"text": prompt}
 
+
 def tokenizer_format_prompt(sample):
     prompt_text = format_prompt(sample)["text"]
     out = tokenizer(
         prompt_text,
-        truncation=True,        # 超过就截断
-        padding="max_length",   # 不足强制pad到MAX_SEQ_LENGTH
+        truncation=True,  # 超过就截断
+        padding="max_length",  # 不足强制pad到MAX_SEQ_LENGTH
         max_length=MAX_SEQ_LENGTH,
     )
     out["labels"] = out["input_ids"].copy()
     return out
+
 
 print("开始加载数据集")
 # ====================== 加载数据与模型 ======================
@@ -87,7 +88,9 @@ dataset = load_dataset(
     "json", data_files={"train": TRAIN_DATA_PATH, "val": VAL_DATA_PATH}
 )
 
-train_ds = dataset["train"].map(tokenizer_format_prompt, batched=False) # 如果开启batched, 必须用tokenizer_format_prompt
+train_ds = dataset["train"].map(
+    tokenizer_format_prompt, batched=False
+)  # 如果开启batched, 必须用tokenizer_format_prompt
 val_ds = dataset["val"].map(tokenizer_format_prompt, batched=False)
 
 model = AutoModelForCausalLM.from_pretrained(
