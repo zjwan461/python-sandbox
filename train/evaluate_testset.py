@@ -14,7 +14,7 @@ import torch
 from tqdm import tqdm
 
 # ====================== 配置区 ======================
-MERGED_MODEL_DIR = "./output/code-danger-merged-full"
+MERGED_MODEL_DIR = "./output/jarvis-coder"
 TEST_DATA_PATH = "./datasets/test.jsonl"
 OUTPUT_ERROR_FILE = "./output/test_error_samples.jsonl"
 MAX_SEQ_LENGTH = 1536

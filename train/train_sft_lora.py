@@ -18,8 +18,8 @@ load_dotenv()
 BASE_MODEL = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
 TRAIN_DATA_PATH = "./datasets/train.jsonl"
 VAL_DATA_PATH = "./datasets/val.jsonl"
-OUTPUT_DIR = "./output/code-danger-lora"
-MERGED_MODEL_DIR = "./output/code-danger-merged-full"  # 合并之后完整模型输出目录
+OUTPUT_DIR = "./output/jarvis-coder-lora"
+MERGED_MODEL_DIR = "./output/jarvis-coder"  # 合并之后完整模型输出目录
 """
 GPU 型号           显存   MAX_SEQ_LENGTH  BATCH_SIZE  GRAD_ACCUM  总有效 Batch    状态备注
 RTX 5060Ti 16G     16GB      1536         2           8         16           ✅舒适; 1.5B宽松; 跑7B建议BATCH_SIZE=1 GRAD_ACCUM=16,开启梯度检查点
