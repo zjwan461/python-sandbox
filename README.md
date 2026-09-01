@@ -4,8 +4,6 @@
 
 **核心特性**：使用 docker-java API 直接操作 Docker 守护进程，支持本地和远程 Docker 连接。
 
-## 项目结构
-
 ```
 ├── python-sandbox/          # 🖥️ 后端 API 服务 (Spring Boot 3 + Java 17)
 │   ├── src/main/java/       # 源代码
@@ -13,6 +11,14 @@
 │   ├── Dockerfile           # 应用容器镜像
 │   ├── docker-compose.yml   # Docker Compose 编排
 │   └── README.md            # 详细文档
+│
+├── admin-server/            # 🛠️ 管理端后端（独立 Spring Boot 3 + Maven 工程，/admin-api，端口 9090）
+├── admin-web/               # 🎨 管理端前端（Vue 3 + TS + Vite，由前端批次初始化）
+├── cross-cutting/           # 🗄️ 三工程共享资料：管理端 schema 增量 / 种子数据 / ER 对齐
+│   ├── README.md            # 目录边界定稿与 SQL 执行顺序（唯一真相来源）
+│   └── database/
+│       ├── schema/          # 001~006 增量脚本
+│       └── seed/            # 种子数据
 │
 ├── sdk/                     # 💻 官方客户端 SDK
 │   ├── README.md            # SDK 使用说明
@@ -26,6 +32,24 @@
 ├── .gitignore               # Git 忽略规则
 └── LICENSE                  # MIT License
 ```
+
+## 数据库迁移执行顺序（管理端增量）
+
+管理端与沙箱服务共用 MySQL `sandbox` 库（共库不同表）。schema 增量脚本统一维护在
+[`cross-cutting/database/`](cross-cutting/database/schema)（唯一真相来源），请按以下顺序执行：
+
+```
+1. python-sandbox/src/main/resources/db/init.sql                  # 既有基线（api_log、sandbox_operation_log）
+2. cross-cutting/database/schema/001-admin-rbac.sql               # 用户/角色/菜单
+3. cross-cutting/database/schema/002-client-apikey.sql            # 客户端与 ApiKey（明文不入库）
+4. cross-cutting/database/schema/003-ratelimit.sql                # 限流规则
+5. cross-cutting/database/schema/004-admin-audit.sql              # 登录/操作审计日志
+6. cross-cutting/database/schema/005-sys-config.sql               # 系统设置 KV
+7. cross-cutting/database/schema/006-sandbox-log-extension.sql    # 扩展 api_log / sandbox_operation_log（幂等）
+8. cross-cutting/database/seed/001-admin-seed.sql                 # 种子数据（admin/Admin@123 的 BCrypt 哈希、默认角色/菜单/设置）
+```
+
+所有增量与种子脚本均为幂等设计，可重复执行。详见 [cross-cutting/README.md](cross-cutting/README.md)。
 
 ## 快速开始
 

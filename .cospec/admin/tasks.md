@@ -10,6 +10,7 @@
 - 后续所有新增、修改任务的合法目标路径仅为 `admin-web/**`、`admin-server/**`、`python-sandbox/**` 或 `cross-cutting/**`；跨目录源码依赖与越界工程改造不纳入本清单。
 
 ## 任务 T-0001: 固化独立工程目录与代码隔离边界
+- 状态: [x] 已完成（批次1，见 `cross-cutting/README.md`）
 - 所属工程: cross-cutting
 - 阶段: P0(必须)
 - 前置依赖: 无
@@ -18,6 +19,7 @@
 - 验收标准: 三工程与共享资料目录的归属清晰；`admin-server/` 与 `python-sandbox/` 仅允许通过 `/internal/**` HTTP 或既有数据库表交互，不允许源码 import，不允许管理端直接依赖 Docker 实现。
 
 ## 任务 T-0002: 落地基础 RBAC 与用户部门文本字段 schema
+- 状态: [x] 已完成（批次1，`cross-cutting/database/schema/001-admin-rbac.sql`）
 - 所属工程: cross-cutting
 - 阶段: P0(必须)
 - 前置依赖: T-0001
@@ -26,6 +28,7 @@
 - 验收标准: 用户名、角色权限字符满足唯一约束；用户角色与角色菜单为多对多关系；菜单支持目录、菜单、按钮及树形父级；部门仅是可空文本，不提供本轮部门树 CRUD、岗位挂载或迁移语义。
 
 ## 任务 T-0003: 落地客户端与 ApiKey schema
+- 状态: [x] 已完成（批次1，`cross-cutting/database/schema/002-client-apikey.sql`）
 - 所属工程: cross-cutting
 - 阶段: P0(必须)
 - 前置依赖: T-0001
@@ -34,6 +37,7 @@
 - 验收标准: 客户端编码全局唯一；ApiKey 持久化数据不包含可恢复明文且任何列表、详情、Redis 和普通日志均不返回明文；数据库仅保留可安全认证的非明文材料、前缀、后四位掩码与一次性展示消费标记，不新建限流命中独立表。
 
 ## 任务 T-0004: 落地限流规则 schema
+- 状态: [x] 已完成（批次1，`cross-cutting/database/schema/003-ratelimit.sql` + `006` 对 api_log 的 rate_limit_hit/rate_limit_rule_id 扩展）
 - 所属工程: cross-cutting
 - 阶段: P0(必须)
 - 前置依赖: T-0001
@@ -42,6 +46,7 @@
 - 验收标准: 规则可唯一确定维度、目标、窗口与状态；支持多条规则作用于同一目标；限流命中明确复用 `api_log` 的 `rate_limit_hit` 与 `rate_limit_rule_id` 字段语义，不创建 `ratelimit_hit_log`。
 
 ## 任务 T-0005: 落地登录与操作审计 schema
+- 状态: [x] 已完成（批次1，`cross-cutting/database/schema/004-admin-audit.sql`）
 - 所属工程: cross-cutting
 - 阶段: P0(必须)
 - 前置依赖: T-0001
@@ -50,6 +55,7 @@
 - 验收标准: 登录日志可表达成功、失败、锁定与原因；操作日志可表达新增、编辑、删除、启停、撤销、重置、强销；两类日志均以追加为业务口径，不向业务侧开放修改或删除能力。
 
 ## 任务 T-0006: 落地管理端系统设置 KV schema
+- 状态: [x] 已完成（批次1，`cross-cutting/database/schema/005-sys-config.sql`）
 - 所属工程: cross-cutting
 - 阶段: P0(必须)
 - 前置依赖: T-0001
@@ -58,6 +64,7 @@
 - 验收标准: 每个设置项可通过稳定键读取、更新并关联类型与说明；未识别的设置键不被业务接口接受；敏感业务凭证不作为普通系统设置保存。
 
 ## 任务 T-0007: 生成管理端初始化种子数据
+- 状态: [x] 已完成（批次1，`cross-cutting/database/seed/001-admin-seed.sql`）
 - 所属工程: cross-cutting
 - 阶段: P0(必须)
 - 前置依赖: T-0002, T-0003, T-0005, T-0006
@@ -66,6 +73,7 @@
 - 验收标准: 初始化后可形成超级管理员到角色再到菜单权限的完整链路；普通用户仅拥有自身业务数据范围；示例 ApiKey 仅用于列表识别且为不可用或已消费状态，数据库、初始化文件与执行日志均不出现可调用的明文 ApiKey。
 
 ## 任务 T-0008: 对齐跨工程 ER 与 schema 增量方向
+- 状态: [x] 已完成（批次1，`cross-cutting/database/er-alignment.md`）
 - 所属工程: cross-cutting
 - 阶段: P0(必须)
 - 前置依赖: T-0002, T-0003, T-0004, T-0005, T-0006
@@ -74,6 +82,7 @@
 - 验收标准: ApiKey 关联客户端和可选归属用户；客户端、ApiKey、限流规则、API 日志、沙箱操作日志和运行中会话的归属键一致；ApiLog 的限流命中字段与限流规则主键可关联；`admin-server/` 与 `python-sandbox/` 不通过代码模型共享对象。
 
 ## 任务 T-0009: 实现 MyBatis Plus BaseEntity 与自动填充
+- 状态: [x] 已完成（批次2，`admin-server/.../common/entity/BaseEntity.java` + `common/handler/AdminMetaObjectHandler.java`，IdType.AUTO 与 schema 对齐，登录前 create_by=system）
 - 所属工程: admin-server
 - 阶段: P0(必须)
 - 前置依赖: T-0002, T-0003, T-0004, T-0005, T-0006
@@ -82,6 +91,7 @@
 - 验收标准: 所有管理端业务实体可复用统一公共字段；新增、更新、逻辑删除行为一致；登录前和种子数据使用明确系统归属；该能力不修改或继承 `python-sandbox/` 中任何类。
 
 ## 任务 T-0010: 初始化 admin-server 独立后端工程
+- 状态: [x] 已完成（批次1，`admin-server/pom.xml` + `application.yml` + `AdminServerApplication`，`mvn compile` 验证通过）
 - 所属工程: admin-server
 - 阶段: P0(必须)
 - 前置依赖: T-0001
@@ -98,6 +108,7 @@
 - 验收标准: `admin-web/` 保持根目录一级工程身份；所有管理端请求经 `/admin-api` 和统一 Axios 封装处理，短期会话、HttpOnly Cookie 与 `X-Trace-Id` 的职责不混用；登录页、Default Layout 和 Blank Layout 可直接作为后续业务页面基线；不引入 `python-sandbox/` 前端或后端源码。
 
 ## 任务 T-0012: 建立系统设置基础读取能力
+- 状态: [x] 已完成（批次2，`sys/service/SysConfigReader.java`：受控键白名单+value_type 强校验+未登记键拒绝+60s 本地缓存+默认业务值回落）
 - 所属工程: admin-server
 - 阶段: P0(必须)
 - 前置依赖: T-0006, T-0007, T-0010
@@ -106,6 +117,7 @@
 - 验收标准: 认证与限流组件只读取其允许的系统设置；缺失或非法配置具有明确默认业务值；设置内容不包含客户端 ApiKey 或内部共享凭证；`python-sandbox/` 不依赖此管理端内部配置类。
 
 ## 任务 T-0013: 实现图形验证码接口
+- 状态: [x] 已完成（批次2，`auth/service/CaptchaService.java` + `GET /auth/captcha`：Easy-Captcha 算术码，Redis `admin:captcha:{id}` TTL 5min，一次性消费，错误不计账号失败次数）
 - 所属工程: admin-server
 - 阶段: P0(必须)
 - 前置依赖: T-0002, T-0010, T-0012
@@ -114,6 +126,7 @@
 - 验收标准: 验证码错误直接返回验证码业务错误且不增加账号失败次数；验证码校验后不能再次使用；验证码状态存储与登录失败计数分离，命名空间不与 `python-sandbox/` 冲突。
 
 ## 任务 T-0014: 实现 Sa-Token 登录态与禁止多端同时在线
+- 状态: [x] 已完成（批次2，`common/config/SaTokenConfig.java` 路由拦截+白名单、`application.yml` is-concurrent=false 后登踢先登、`common/security/AdminStpInterface.java` 权限快照、`GlobalExceptionHandler` 20001/20002/20003/20004/11004 语义区分；会话键由 Sa-Token 统一管理，业务自建键 admin: 前缀）
 - 所属工程: admin-server
 - 阶段: P0(必须)
 - 前置依赖: T-0002, T-0010, T-0012
@@ -122,6 +135,7 @@
 - 验收标准: 同一账号新会话建立后旧会话被强制失效；后续旧端访问得到被踢下线语义；短期会话、在线映射和 Redis key 位于 `admin:` 命名空间；不使用 Sa-Token 通道承载客户端 ApiKey。
 
 ## 任务 T-0015: 实现账号密码登录、验证码接入与踢下线前端闭环
+- 状态: [-] admin-server 部分已完成（批次2，`auth/controller/AuthController.java` + `auth/service/AuthService.java`：账密+验证码+失败锁定读 sys_config+admin_login_log 落库+Sa-Token 签发+首登强制改密标记透出+注销+被踢下线 20004 语义；admin-web 部分依赖 T-0011，未在本批次范围）
 - 所属工程: admin-server | admin-web
 - 阶段: P0(必须)
 - 前置依赖: T-0011, T-0013, T-0014
@@ -130,6 +144,7 @@
 - 验收标准: 登录页完整提供账号、密码与验证码操作；验证码错误不触发锁定，启用提前验证码策略时按登录失败阶段要求输入；连续失败达到配置阈值后账号在锁定期限内不可登录；被踢下线和主动退出均进入登录页且不再保留可用会话；前端不把短期 token 写入其他可被脚本读取的本地存储。
 
 ## 任务 T-0016: 实现统一响应、全局异常与参数校验
+- 状态: [x] 已完成（批次2，`common/result/R.java` + `PageResult.java`、`common/exception/ErrorCode.java`（§10.2 分段）+ `BusinessException.java` + `GlobalExceptionHandler.java`、`SaTokenConfig` 统一 CORS、jakarta validation 字段级错误透出；`common/filter/AdminTraceFilter.java` traceId 独立实现）
 - 所属工程: admin-server
 - 阶段: P0(必须)
 - 前置依赖: T-0010
@@ -138,6 +153,7 @@
 - 验收标准: 所有管理端接口使用同一成功、失败、分页与时间表达；业务异常不暴露内部对象；校验错误能定位字段；未登录、无权限、角色不足、停用与被踢下线具有互不混淆的语义。
 
 ## 任务 T-0017: 实现登录用户密码生命周期管理
+- 状态: [-] admin-server 部分已完成（批次2：`PUT /auth/password` 校验旧密码、成功后 `StpUtil.logout` 作废旧会话、first_login 解除标记；管理员重置密码/手动解锁/启停用见 `/users/{id}/reset-password`、`/users/{id}/unlock`、`/users/{id}/status`；admin-web 部分未在本批次范围）
 - 所属工程: admin-server | admin-web
 - 阶段: P0(必须)
 - 前置依赖: T-0015, T-0016
@@ -146,6 +162,7 @@
 - 验收标准: 修改密码后所有未失效旧会话立即作废；首次登录用户不能跳过改密流程；管理员可重置任意账号密码并能按 FR-AUTH-05 语义手动解锁；前端提供改密、重置和锁定状态表达，不展示密码或密码摘要。
 
 ## 任务 T-0018: 实现用户管理后端与前端
+- 状态: [-] admin-server 部分已完成（批次2，`rbac/controller/UserController.java` + `rbac/service/AdminUserService.java`：分页筛选、详情、新增/编辑、启停用（停用即时踢下线+最后超管保护+禁自停用）、重置密码、手动解锁、分配角色（变更作废旧会话）、用户名唯一、至少一角色校验、VO 不含密码字段；用户软删除与历史归属转移、删除阻断校验依赖批次3 的 ApiKey/会话数据，本批次未实现；admin-web 部分未在本批次范围）
 - 所属工程: admin-server | admin-web
 - 阶段: P0(必须)
 - 前置依赖: T-0002, T-0009, T-0010, T-0011, T-0015, T-0016, T-0017
@@ -154,6 +171,7 @@
 - 验收标准: FR-USER-01~FR-USER-06 与 FR-USER-08 的字段和动作完整可用；已登录或仍持有效 ApiKey 的用户删除按业务规则阻止；可删除的普通用户停用或软删除后，其历史数据仅管理员和审计员可见且不存在悬空归属；停用用户及其 ApiKey 在 `python-sandbox/` 侧形成明确拒绝语义；普通用户不能访问他人用户管理数据或管理动作，越权请求不返回目标数据。
 
 ## 任务 T-0019: 实现角色与菜单管理后端和前端
+- 状态: [-] admin-server 部分已完成（批次2，`rbac/controller/RoleController.java`+`AdminRoleService.java`：列表/增改删/启停用/分配菜单，roleKey 唯一、内置角色不可删不可改权限字符、被引用不可删、授权变更后作废受影响会话；`rbac/controller/MenuController.java`+`AdminMenuService.java`：树形 CRUD、M/C/F 三类校验（按钮必填 perms）、子节点删除阻断、`GET /menus/routes` 按角色过滤的动态菜单树；admin-web 部分未在本批次范围）
 - 所属工程: admin-server | admin-web
 - 阶段: P0(必须)
 - 前置依赖: T-0002, T-0009, T-0010, T-0011, T-0016
@@ -162,6 +180,7 @@
 - 验收标准: 角色权限字符唯一；用户至少可关联一个角色；菜单树可表达目录、菜单、按钮、路由、组件、外链、缓存和显隐；按钮权限采用统一权限字符；当前用户只能得到自身角色授权的菜单与按钮数据。
 
 ## 任务 T-0020: 实现管理端审计日志落库与查询
+- 状态: [-] admin-server 部分已完成（批次2，`audit/entity/AdminLoginLog|AdminOpLog`（与 schema/004 字段一致，只追加）、登录日志随登录流程落库（SUCCESS/FAIL/LOCKED+原因+IP/UA）、`audit/annotation/OperationLog`+`audit/aspect/OpLogAspect` 写操作切面（操作人/模块/类型/目标/traceId/IP/UA）、`audit/controller/AuditLogController` 只读分页查询（loginlog:view/oplog:view 权限码，普通用户无授权即越权拒绝）；用户/角色/菜单写操作已挂注解。审计查询前端页面（admin-web/src/views/audit/）未在本批次范围）
 - 所属工程: admin-server | admin-web
 - 阶段: P0(必须)
 - 前置依赖: T-0005, T-0009, T-0010, T-0015, T-0016
@@ -170,6 +189,7 @@
 - 验收标准: 登录成功、失败、锁定及原因完整留痕；管理端新增、编辑、删除、启停、撤销、重置、强销和对接调用均记录当前操作人、对象主键与对象名、关键变更、IP、UA 和结果；审计记录只追加；普通用户无查看权限，越权访问不能获得日志数据。
 
 ## 任务 T-0021: 实现 MyBatis 管理端数据权限拦截器
+- 状态: [x] 已完成（批次2 通用机制，`common/datapermission/AdminDataPermissionHandler`（MyBatis Plus MultiDataPermissionHandler，注册表驱动：client_app/client_api_key/api_log/sandbox_operation_log 的 SELF 行过滤，COALESCE(bound_user_id, client_app.owner_user_id) 口径）+ `DataPermissionIgnoreHolder`（runIgnored 绕过）+ `MybatisPlusConfig` 插件链装配；superadmin/admin/auditor=ALL 不过滤，common=SELF；admin_*/sys_config/ratelimit_rule 等元数据表不受作用。批次3 的客户端/ApiKey/日志/会话查询直接复用）
 - 所属工程: admin-server
 - 阶段: P0(必须)
 - 前置依赖: T-0018, T-0019

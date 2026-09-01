@@ -1,0 +1,95 @@
+# =====================================================================
+# admin-server 应用配置（T-0010）
+# 依据：design.md §3.1.2、§3.2、§4.2、§6.3
+# 命名空间硬约束：
+#   * HTTP 前缀 /admin-api（context-path），端口 9090，不占用 /api/sandbox/**
+#   * Sa-Token Redis 命名空间 admin:（is-share=false + token-name + 自定义 key 前缀）
+#   * 内部凭证 admin.internal.token 支持 ENV（ADMIN_INTERNAL_TOKEN）覆盖，
+#     不写入数据库、不进入 Redis、不出现在日志（design.md §6.3 默认决策 #9）
+# =====================================================================
+
+server:
+  port: 9090
+  servlet:
+    context-path: /admin-api
+
+spring:
+  application:
+    name: admin-server
+
+  # 数据源：与 python-sandbox 共用 MySQL sandbox 库（共库不同表）
+  datasource:
+    url: ${DB_URL:jdbc:mysql://mysql:3306/sandbox?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  # Redis：与 python-sandbox 共用实例，键前缀隔离（admin: vs sandbox:）
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DATABASE:0}
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+
+  # Jackson 统一时间表达（design.md §10.1 统一响应）
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: always
+
+# MyBatis-Plus：与既有工程同风格（auto 主键、deleted 逻辑删除、下划线转驼峰）
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    banner: false
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# Sa-Token（design.md §4.2：禁止多端同时在线=踢下线，token 命名空间与 python-sandbox 隔离）
+sa-token:
+  token-name: Authorization            # 短期 token 走 Authorization 头
+  token-prefix: Bearer
+  timeout: 86400                       # 短期 token 有效期（秒），默认 24h
+  active-timeout: -1
+  # 注：Sa-Token 框架 Redis 键使用其内置 satoken: 前缀（1.37 无全局 key-prefix 配置）；
+  # 本工程自建业务键（验证码/失败计数/在线映射）统一 admin: 前缀，python-sandbox 不使用 Sa-Token，无冲突。
+  is-concurrent: false                 # 同一账号新登录踢掉旧会话（默认决策 #6，后登踢先登）
+  is-share: false                      # 每次登录生成新 token
+  is-read-cookie: false                # 前端从响应体取 token 放 Pinia，经请求头携带
+  is-read-header: true
+  token-style: uuid
+  # 长期"记住我"token 不走 sa-token 通道（T-0034 独立 HttpOnly Cookie 实现），
+  # 其最长免登天数取自 sys_config: remember.me.max.days
+
+# 管理端自定义配置
+admin:
+  # 对接 python-sandbox /internal/** 的内部共享凭证（默认决策 #9）。
+  # 生产环境必须以环境变量 ADMIN_INTERNAL_TOKEN 注入覆盖默认值。
+  internal:
+    token: ${ADMIN_INTERNAL_TOKEN:change-me-admin-internal-token}
+  # python-sandbox 服务地址（Bridge 对接网关使用，T-0027）
+  sandbox:
+    base-url: ${SANDBOX_BASE_URL:http://python-sandbox:8080}
+
+logging:
+  level:
+    io.github.sandbox.admin: INFO
