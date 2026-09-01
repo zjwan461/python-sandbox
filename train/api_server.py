@@ -1,7 +1,15 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+import os
 import torch
 from vllm import LLM, SamplingParams
+
+# 如果没有 GPU，强制使用 CPU 模式
+if not torch.cuda.is_available():
+    os.environ["VLLM_USE_CUDA"] = "0"
+    print("警告: 未检测到 GPU，将使用 CPU 模式（推理速度会非常慢）")
+else:
+    print(f"检测到 GPU: {torch.cuda.get_device_name(0)}")
 
 app = FastAPI(title="Code Danger Detect Service")
 
@@ -14,7 +22,8 @@ llm = LLM(
     # enable_lora=True,
     # max_lora_rank=8,
     # gpu_memory_utilization=0.85,
-    trust_remote_code=True
+    trust_remote_code=True,
+    enforce_eager=True,  # CPU 模式需要此参数
 )
 # lora_id = llm.lora_loader.add_lora(LORA_PATH)
 
