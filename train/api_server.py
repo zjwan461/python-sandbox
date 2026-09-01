@@ -9,22 +9,13 @@ app = FastAPI(title="Code Danger Detect Service")
 # LORA_PATH = "./jarvis-coder-lora"
 JARVIS_CODER = "zjwan461/jarvis-coder"
 
-# 检查 GPU 可用性
-if torch.cuda.is_available():
-    print(f"检测到 GPU: {torch.cuda.get_device_name(0)}")
-    llm_kwargs = {
-        "model": JARVIS_CODER,
-        "trust_remote_code": True,
-    }
-else:
-    print("警告: 未检测到 GPU，将使用 CPU 模式（推理速度会非常慢）")
-    llm_kwargs = {
-        "model": JARVIS_CODER,
-        "trust_remote_code": True,
-        "device_type": "cpu",
-    }
-
-llm = LLM(**llm_kwargs)
+llm = LLM(
+    model=JARVIS_CODER,
+    # enable_lora=True,
+    # max_lora_rank=8,
+    # gpu_memory_utilization=0.85,
+    trust_remote_code=True
+)
 # lora_id = llm.lora_loader.add_lora(LORA_PATH)
 
 sampling_params = SamplingParams(
