@@ -10,9 +10,9 @@ JARVIS_CODER = "zjwan461/jarvis-coder"
 
 llm = LLM(
     model=JARVIS_CODER,
-    enable_lora=True,
-    max_lora_rank=8,
-    gpu_memory_utilization=0.85,
+    # enable_lora=True,
+    # max_lora_rank=8,
+    # gpu_memory_utilization=0.85,
     trust_remote_code=True
 )
 # lora_id = llm.lora_loader.add_lora(LORA_PATH)
