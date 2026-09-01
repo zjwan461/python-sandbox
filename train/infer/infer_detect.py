@@ -28,6 +28,7 @@ def detect(code_snippet: str) -> str:
         **inputs,
         temperature=0.0,
         top_p=1.0,
+        do_sample=False,
         max_new_tokens=10,
         pad_token_id=tokenizer.eos_token_id,
     )
