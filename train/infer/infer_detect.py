@@ -4,14 +4,17 @@ import time
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
-BASE_MODEL = "zjwan461/jarvis-coder"
+BASE_MODEL = os.getenv("BASE_MODEL", "zjwan461/jarvis-coder")
 
 _model = None
 _tokenizer = None
