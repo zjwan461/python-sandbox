@@ -12,7 +12,9 @@ from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 from tqdm import tqdm
+from dotenv import load_dotenv
 
+load_dotenv()
 # ====================== 配置区 ======================
 MERGED_MODEL_DIR = "./output/jarvis-coder"
 TEST_DATA_PATH = "./datasets/test.jsonl"
