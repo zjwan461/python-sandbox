@@ -15,6 +15,7 @@ load_dotenv()
 
 # ====================== 配置区 ======================
 # BASE_MODEL = "deepseek-ai/deepseek-coder-1.3b-instruct"
+# BASE_MODEL = "Qwen/Qwen2.5-Coder-0.5B"
 BASE_MODEL = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
 TRAIN_DATA_PATH = "./datasets/train.jsonl"
 VAL_DATA_PATH = "./datasets/val.jsonl"
