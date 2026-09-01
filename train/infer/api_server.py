@@ -1,9 +1,27 @@
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from pydantic import BaseModel
-from infer_detect import detect
+from infer_detect import init_model, release_model, detect as detect_fn
 
-app = FastAPI(title="Code Danger Detect Service")
-JARVIS_CODER = "zjwan461/jarvis-coder"
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("服务启动, 开始加载模型...")
+    init_model()
+    yield
+    logger.info("服务关闭, 开始释放资源...")
+    release_model()
+
+
+app = FastAPI(title="Code Danger Detect Service", lifespan=lifespan)
 
 
 class DetectReq(BaseModel):
@@ -11,8 +29,8 @@ class DetectReq(BaseModel):
 
 
 @app.post("/detect")
-def detect(req: DetectReq):
-    pred = detect(req.code)
+def detect_endpoint(req: DetectReq):
+    pred = detect_fn(req.code)
     label = "DANGEROUS" if "DANGEROUS" in pred else "SAFE"
     return {"label": label, "raw_output": pred}
 
