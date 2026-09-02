@@ -1,10 +1,10 @@
-# Code Danger Detect 推理服务 - CUDA 版本 (transformers + GPU 推理)
+# Code Danger Detect 推理服务 - CUDA 版本 (transformers + GPU 推理, 模型内置镜像)
 # torch cu128 wheel 自带 CUDA 运行时, 宿主机需安装 nvidia-container-toolkit 并注入 libcuda
 # 构建(以本目录为 context):
 #   docker build -f Dockerfile.cuda -t code-detect:cuda .
-# 运行:
-#   docker run -d --gpus all -p 8000:8000 -e BASE_MODEL=zjwan461/jarvis-coder \
-#     -v ./hf-cache:/home/app/.cache/huggingface code-detect:cuda
+#   换模型: docker build -f Dockerfile.cuda --build-arg BASE_MODEL=xxx -t code-detect:cuda .
+# 运行(模型已打进镜像, 无需挂载缓存卷; BASE_MODEL 须与构建时一致):
+#   docker run -d --gpus all -p 8000:8000 -e BASE_MODEL=zjwan461/jarvis-coder code-detect:cuda
 
 FROM python:3.11-slim
 
@@ -14,13 +14,19 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     HF_HOME=/home/app/.cache/huggingface
 
+# 构建期下载并打进镜像的模型 (需与运行期环境变量 BASE_MODEL 一致)
+ARG BASE_MODEL=zjwan461/jarvis-coder
+
 RUN useradd -m app && mkdir -p /home/app/.cache/huggingface && chown -R app:app /home/app
 COPY --chown=app:app requirements-cuda.txt .
 RUN pip install --no-cache-dir -r requirements-cuda.txt
 
+# 构建期预下载模型权重到 HF_HOME, 直接打入镜像
+USER app
+RUN hf download ${BASE_MODEL}
+
 COPY --chown=app:app infer_detect.py api_server.py ./
 
-USER app
 EXPOSE 8000
 
 CMD ["python", "api_server.py"]

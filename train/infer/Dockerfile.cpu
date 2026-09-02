@@ -1,9 +1,9 @@
-# Code Danger Detect 推理服务 - CPU 版本 (transformers 推理)
+# Code Danger Detect 推理服务 - CPU 版本 (transformers 推理, 模型内置镜像)
 # 构建(以本目录为 context):
 #   docker build -f Dockerfile.cpu -t code-detect:cpu .
-# 运行:
-#   docker run -d -p 8000:8000 -e BASE_MODEL=zjwan461/jarvis-coder \
-#     -v ./hf-cache:/home/app/.cache/huggingface code-detect:cpu
+#   换模型: docker build -f Dockerfile.cpu --build-arg BASE_MODEL=xxx -t code-detect:cpu .
+# 运行(模型已打进镜像, 无需挂载缓存卷; BASE_MODEL 须与构建时一致):
+#   docker run -d -p 8000:8000 -e BASE_MODEL=zjwan461/jarvis-coder code-detect:cpu
 
 FROM python:3.11-slim
 
@@ -13,14 +13,19 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     HF_HOME=/home/app/.cache/huggingface
 
-# 模型权重缓存目录(便于运行时通过 volume 挂载复用)
+# 构建期下载并打进镜像的模型 (需与运行期环境变量 BASE_MODEL 一致)
+ARG BASE_MODEL=zjwan461/jarvis-coder
+
 RUN useradd -m app && mkdir -p /home/app/.cache/huggingface && chown -R app:app /home/app
 COPY --chown=app:app requirements-cpu.txt .
 RUN pip install --no-cache-dir -r requirements-cpu.txt
 
+# 构建期预下载模型权重到 HF_HOME, 直接打入镜像
+USER app
+RUN hf download ${BASE_MODEL}
+
 COPY --chown=app:app infer_detect.py api_server.py ./
 
-USER app
 EXPOSE 8000
 
 CMD ["python", "api_server.py"]

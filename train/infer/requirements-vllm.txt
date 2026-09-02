@@ -5,3 +5,5 @@ vllm==0.11.0
 fastapi==0.121.1
 uvicorn==0.34.0
 python-dotenv==1.2.1
+# 构建期 hf download 预下载模型使用
+huggingface_hub[hf_xet]

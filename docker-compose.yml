@@ -179,7 +179,8 @@ services:
   # 启用方式：在根 .env 中设置 COMPOSE_PROFILES=detect-vllm（见 .env.example），
   #          或命令行 docker compose --profile detect-cpu up -d
   # 构建上下文为 train/infer 目录，不受根 .dockerignore 影响。
-  # 模型权重缓存统一挂载到 hf-cache 卷，避免容器重启后重复下载。
+  # 模型权重已在构建期下载并打进镜像（勿再挂载卷遮蔽镜像内模型目录），
+  # BASE_MODEL 经 build args 传入构建期并与运行期环境变量保持一致。
   # ---------------------------------------------------------------------
 
   # 推理服务 - CPU 版（transformers）
@@ -188,14 +189,14 @@ services:
     build:
       context: ./train/infer
       dockerfile: Dockerfile.cpu
+      args:
+        BASE_MODEL: ${BASE_MODEL:-zjwan461/jarvis-coder}
     image: ghcr.io/zjwan461/code-detect:${IMAGE_TAG:-1.0.1}-cpu
     container_name: code-detect-cpu
     ports:
       - "${DETECT_PORT:-8000}:8000"
     environment:
       - BASE_MODEL=${BASE_MODEL:-zjwan461/jarvis-coder}
-    volumes:
-      - hf-cache:/home/app/.cache/huggingface
     restart: unless-stopped
     # 网络别名：sandbox-api 通过 http://code-detect:8000 访问（三选一启动时别名唯一）
     networks:
@@ -209,14 +210,14 @@ services:
     build:
       context: ./train/infer
       dockerfile: Dockerfile.cuda
+      args:
+        BASE_MODEL: ${BASE_MODEL:-zjwan461/jarvis-coder}
     image: ghcr.io/zjwan461/code-detect:${IMAGE_TAG:-1.0.1}-cuda
     container_name: code-detect-cuda
     ports:
       - "${DETECT_PORT:-8000}:8000"
     environment:
       - BASE_MODEL=${BASE_MODEL:-zjwan461/jarvis-coder}
-    volumes:
-      - hf-cache:/home/app/.cache/huggingface
     restart: unless-stopped
     # 网络别名：sandbox-api 通过 http://code-detect:8000 访问（三选一启动时别名唯一）
     networks:
@@ -237,6 +238,8 @@ services:
     build:
       context: ./train/infer
       dockerfile: Dockerfile.vllm
+      args:
+        BASE_MODEL: ${BASE_MODEL:-zjwan461/jarvis-coder}
     image: ghcr.io/zjwan461/code-detect:${IMAGE_TAG:-1.0.1}-vllm
     container_name: code-detect-vllm
     ports:
@@ -245,8 +248,6 @@ services:
       - BASE_MODEL=${BASE_MODEL:-zjwan461/jarvis-coder}
       - MAX_MODEL_LEN=${MAX_MODEL_LEN:-1024}
       - GPU_MEMORY_UTILIZATION=${GPU_MEMORY_UTILIZATION:-0.85}
-    volumes:
-      - hf-cache:/home/app/.cache/huggingface
     restart: unless-stopped
     # 网络别名：sandbox-api 通过 http://code-detect:8000 访问（三选一启动时别名唯一）
     networks:
@@ -283,5 +284,3 @@ volumes:
   mysql-data:
   redis-data:
   prometheus-data:
-  # HuggingFace 模型权重缓存（三个推理服务共用，避免重复下载）
-  hf-cache:

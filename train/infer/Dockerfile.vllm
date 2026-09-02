@@ -1,12 +1,12 @@
-# Code Danger Detect 推理服务 - vLLM 版本 (vLLM 引擎 + GPU 推理)
+# Code Danger Detect 推理服务 - vLLM 版本 (vLLM 引擎 + GPU 推理, 模型内置镜像)
 # vllm 官方 wheel 仅支持 Linux; 其依赖的 torch 自带 CUDA 运行时,
 # 宿主机需安装 nvidia-container-toolkit, 显存建议 >= 8GB
 # 构建(以本目录为 context):
 #   docker build -f Dockerfile.vllm -t code-detect:vllm .
-# 运行:
+#   换模型: docker build -f Dockerfile.vllm --build-arg BASE_MODEL=xxx -t code-detect:vllm .
+# 运行(模型已打进镜像, 无需挂载缓存卷; BASE_MODEL 须与构建时一致):
 #   docker run -d --gpus all -p 8000:8000 -e BASE_MODEL=zjwan461/jarvis-coder \
-#     -e MAX_MODEL_LEN=1024 -e GPU_MEMORY_UTILIZATION=0.85 \
-#     -v ./hf-cache:/home/app/.cache/huggingface code-detect:vllm
+#     -e MAX_MODEL_LEN=1024 -e GPU_MEMORY_UTILIZATION=0.85 code-detect:vllm
 
 FROM python:3.11-slim
 
@@ -21,13 +21,19 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     HF_HOME=/home/app/.cache/huggingface
 
+# 构建期下载并打进镜像的模型 (需与运行期环境变量 BASE_MODEL 一致)
+ARG BASE_MODEL=zjwan461/jarvis-coder
+
 RUN useradd -m app && mkdir -p /home/app/.cache/huggingface && chown -R app:app /home/app
 COPY --chown=app:app requirements-vllm.txt .
 RUN pip install --no-cache-dir -r requirements-vllm.txt
 
+# 构建期预下载模型权重到 HF_HOME, 直接打入镜像
+USER app
+RUN hf download ${BASE_MODEL}
+
 COPY --chown=app:app vllm_api_server.py ./
 
-USER app
 EXPOSE 8000
 
 CMD ["python", "vllm_api_server.py"]
