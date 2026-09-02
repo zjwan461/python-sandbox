@@ -306,7 +306,7 @@
   <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        启动沙箱服务
+        全栈启动（推荐）
       
     </span>
   </a>
@@ -366,10 +366,38 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="核心功能">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        沙箱执行服务
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        管理控制台
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
+  <a href="#_7" class="md-nav__link">
     <span class="md-ellipsis">
       
         安全特性
@@ -380,7 +408,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_6" class="md-nav__link">
+  <a href="#_8" class="md-nav__link">
     <span class="md-ellipsis">
       
         配置示例
@@ -391,7 +419,18 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        文档导航
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
     <span class="md-ellipsis">
       
         许可证
@@ -424,6 +463,33 @@
     
   
     服务端文档
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="ai-detect/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI危险代码检测
   
 
     
@@ -543,7 +609,7 @@
   <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        启动沙箱服务
+        全栈启动（推荐）
       
     </span>
   </a>
@@ -603,10 +669,38 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="核心功能">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        沙箱执行服务
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        管理控制台
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
+  <a href="#_7" class="md-nav__link">
     <span class="md-ellipsis">
       
         安全特性
@@ -617,7 +711,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_6" class="md-nav__link">
+  <a href="#_8" class="md-nav__link">
     <span class="md-ellipsis">
       
         配置示例
@@ -628,7 +722,18 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        文档导航
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
     <span class="md-ellipsis">
       
         许可证
@@ -659,35 +764,57 @@
 
 
 <h1 id="python-sandbox">Python Sandbox</h1>
-<p>基于 Docker 容器化技术构建的 Python 隔离运行环境，提供安全的代码沙箱服务。</p>
-<p><strong>核心特性</strong>：使用 docker-java API 直接操作 Docker 守护进程，支持本地和远程 Docker 连接。</p>
+<p>基于 Docker 容器化技术构建的 Python 隔离运行环境，提供安全的代码沙箱服务、
+RBAC 管理控制台与 AI 危险代码检测能力。</p>
+<p><strong>核心特性</strong></p>
+<ul>
+<li>使用 docker-java API 直接操作 Docker 守护进程，支持本地和远程 Docker 连接</li>
+<li>执行前<strong>双策略危险代码检测</strong>（正则静态校验 + Qwen2.5-Coder 微调模型推理），管理端即时可配</li>
+<li>ApiKey 全生命周期管理、多维度限流、traceId 全链路审计</li>
+<li>Java / Python 双 SDK，全栈一键 Docker Compose 编排</li>
+</ul>
 <h2 id="_1">项目结构</h2>
-<pre><code>├── python-sandbox/          # 🖥️ 后端 API 服务 (Spring Boot 3 + Java 17)
-│   ├── src/main/java/       # 源代码
+<pre><code>├── python-sandbox/          # 🖥️ 沙箱执行服务 (Spring Boot 3 + Java 17, :8080)
+│   ├── src/main/java/       # 源代码（controller/service/mapper/aspect/interceptor）
+│   ├── src/main/resources/  # application.yml + db/init.sql
 │   ├── pom.xml              # Maven 配置
-│   ├── Dockerfile           # 应用容器镜像
-│   ├── docker-compose.yml   # Docker Compose 编排
-│   └── README.md            # 详细文档
+│   └── Dockerfile           # 应用容器镜像（根目录为 build context）
+│
+├── admin-server/            # 🛠️ 管理端后端 (Spring Boot 3 + Sa-Token, :9090, /admin-api)
+├── admin-web/               # 🎨 管理端前端 (Vue 3 + TypeScript + Vite + Element Plus, :80)
+│
+├── train/                   # 🤖 AI 危险代码检测模型（Qwen2.5-Coder LoRA 微调）
+│   ├── datasets/            #   训练/验证/测试 JSONL 数据集
+│   ├── *.py                 #   数据合成 / QLoRA 训练 / 测试集评估
+│   └── infer/               #   推理服务（FastAPI，CPU / CUDA / vLLM 三种部署）
+│
+├── cross-cutting/           # 🗄️ 三工程共享资料：管理端 schema 增量 / 种子数据 / ER 对齐
+│   └── database/{schema,seed}/
 │
 ├── sdk/                     # 💻 官方客户端 SDK
-│   ├── README.md            # SDK 使用说明
 │   ├── java-sandbox-sdk/    # Java SDK (Maven)
-│   │   ├── pom.xml
-│   │   └── src/main/java/
-│   └── python-sandbox-sdk/  # Python SDK (pip)
-│       ├── pyproject.toml
-│       └── python_sandbox_sdk/
+│   └── python-sandbox-sdk/  # Python SDK (pip，同步 + 异步 + 12 个 usage 示例)
 │
-├── .gitignore               # Git 忽略规则
+├── docker-compose.yml       # 🐳 全栈编排（根目录统一入口，含推理服务 profile）
+├── .env.example             # ⚙️ 根环境变量示例（所有服务统一读取）
 └── LICENSE                  # MIT License
 </code></pre>
 <h2 id="_2">快速开始</h2>
-<h3 id="_3">启动沙箱服务</h3>
-<p>使用 Docker Compose 一键启动：</p>
-<pre><code class="language-bash">cd python-sandbox
-docker-compose up -d --build
+<h3 id="_3">全栈启动（推荐）</h3>
+<pre><code class="language-bash"># 1. 准备环境变量（Windows 用 copy）
+cp .env.example .env         # 至少修改 DB_PASSWORD / ADMIN_INTERNAL_TOKEN
+
+# 2. 启动核心栈（mysql + redis + sandbox-api + admin-server + admin-web + prometheus）
+docker compose up -d --build
+
+# 3. 按需启用 AI 检测推理服务（三选一，默认不启动）
+docker compose --profile detect-vllm up -d --build
 </code></pre>
-<p>然后访问 <code>http://localhost:8080/health</code> 验证服务状态。</p>
+<ul>
+<li>沙箱服务验证：<code>http://localhost:8080/health</code></li>
+<li>管理控制台：<code>http://localhost</code>（默认账号 admin / Admin@123，生产必改）</li>
+</ul>
+<p>详见 <a href="server/">服务端文档</a>、<a href="ai-detect/">AI 危险代码检测</a>。</p>
 <h3 id="sdk">使用 SDK</h3>
 <h4 id="java">Java</h4>
 <pre><code class="language-java">import io.github.sandbox.sdk.SandboxClient;
@@ -708,7 +835,9 @@ with SandboxClient(&quot;http://localhost:8080&quot;, &quot;your-api-key&quot;) 
     print(result.stdout)
     client.delete_session(session_id)
 </code></pre>
+<p>完整接口说明与更多场景示例见 <a href="sdk/">SDK 文档</a>。</p>
 <h2 id="_4">核心功能</h2>
+<h3 id="_5">沙箱执行服务</h3>
 <table>
 <thead>
 <tr>
@@ -734,8 +863,16 @@ with SandboxClient(&quot;http://localhost:8080&quot;, &quot;your-api-key&quot;) 
 <td>上传、下载、读写沙箱中的文件</td>
 </tr>
 <tr>
-<td><strong>API Key 认证</strong></td>
-<td>所有接口安全认证</td>
+<td><strong>双策略危险检测</strong></td>
+<td>静态校验 + 模型推理，独立开关，管理端即时可改</td>
+</tr>
+<tr>
+<td><strong>ApiKey 认证</strong></td>
+<td>基于 SHA-256 摘要校验，明文仅一次性展示</td>
+</tr>
+<tr>
+<td><strong>多维限流</strong></td>
+<td>API_KEY / CLIENT / GLOBAL 三维度规则，60s 定时热生效</td>
 </tr>
 <tr>
 <td><strong>自动清理</strong></td>
@@ -746,50 +883,92 @@ with SandboxClient(&quot;http://localhost:8080&quot;, &quot;your-api-key&quot;) 
 <td>可配置最大活跃容器数量及超限策略</td>
 </tr>
 <tr>
-<td><strong>启动预热</strong></td>
-<td>可选择在服务启动时预拉取 Python 镜像</td>
+<td><strong>远程 Docker</strong></td>
+<td>支持连接本地或远程 Docker 守护进程（docker-java API）</td>
 </tr>
 <tr>
-<td><strong>远程 Docker</strong></td>
-<td>支持连接本地或远程 Docker 守护进程（通过 docker-java API）</td>
+<td><strong>可观测性</strong></td>
+<td>Prometheus 指标 + API/沙箱操作双审计日志</td>
 </tr>
 </tbody>
 </table>
-<h2 id="_5">安全特性</h2>
+<h3 id="_6">管理控制台</h3>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>能力</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>认证与安全</strong></td>
+<td>Sa-Token 会话、验证码、登录失败锁定、Remember-Me</td>
+</tr>
+<tr>
+<td><strong>RBAC</strong></td>
+<td>用户/角色/菜单，按钮级权限码，数据权限</td>
+</tr>
+<tr>
+<td><strong>ApiKey / 客户端</strong></td>
+<td>签发、吊销、掩码展示；业务方档案与统计</td>
+</tr>
+<tr>
+<td><strong>限流规则</strong></td>
+<td>三维度规则 CRUD，时间窗与优先级</td>
+</tr>
+<tr>
+<td><strong>会话运维</strong></td>
+<td>活跃会话查询、单个/批量强制销毁</td>
+</tr>
+<tr>
+<td><strong>日志审计</strong></td>
+<td>API 日志、沙箱操作日志、登录/操作审计（traceId 串联）</td>
+</tr>
+<tr>
+<td><strong>系统设置</strong></td>
+<td>受控 KV：锁定阈值、默认限流、匿名灰度、CodeGuard 策略开关</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_7">安全特性</h2>
 <ul>
-<li>🔒 <strong>Docker 隔离</strong>：每个会话运行独立的 Python 容器</li>
+<li>🔒 <strong>Docker 隔离</strong>：每个会话运行独立的 Python 容器（内存限制 + 容量上限）</li>
+<li>🔍 <strong>纵深检测</strong>：CodeGuard 双策略——静态黑名单 + 微调模型推理，执行前拦截</li>
 <li>🚫 <strong>命令黑名单</strong>：防止执行危险 shell 命令（删除、格式化、权限提升等）</li>
-<li>🔑 <strong>API Key 认证</strong>：所有接口通过 API Key 保护</li>
-<li>⏱️ <strong>会话超时</strong>：支持配置的自动超时清理机制</li>
-<li>📦 <strong>容量控制</strong>：可配置最大并发容器数量</li>
+<li>🔑 <strong>凭证安全</strong>：ApiKey 仅存 SHA-256 摘要；内部通道独立 token（ENV-only）</li>
+<li>🚦 <strong>限流防护</strong>：三维度规则叠加，全局默认兜底</li>
+<li>📜 <strong>全链路审计</strong>：traceId 串联 API 日志、沙箱操作日志、登录/操作审计</li>
 </ul>
-<h2 id="_6">配置示例</h2>
-<p>首次启动前建议复制示例文件并按需修改：</p>
-<pre><code class="language-bash">cd python-sandbox
-cp .env.example .env
-# 编辑 .env，调整至少以下字段：
-#   SANDBOX_API_KEY                  - API 鉴权密钥
-#   SANDBOX_PULL_IMAGE_ON_STARTUP    - 是否启动时预拉取镜像
-#   SANDBOX_MAX_CONTAINERS           - 最大活跃容器数
-#   DOCKER_HOST                      - Docker 连接地址（本地 socket / 远程 tcp）
-</code></pre>
-<pre><code class="language-bash"># .env 示例
-SANDBOX_API_KEY=my-secret-key
-SANDBOX_IMAGE=python:3.12-trixie
-SANDBOX_MAX_CONTAINERS=5
-SANDBOX_SESSION_TIMEOUT_MILLIS=3600000     # 1 小时超时
-SANDBOX_MAX_CONTAINERS_BEHAVIOR=evict-oldest  # 超过则驱逐最旧
-SANDBOX_PULL_IMAGE_ON_STARTUP=true          # 启动预拉取镜像
-DOCKER_HOST=                                # 留空自动检测本地 Docker
-# 或连接远程 Docker
-# DOCKER_HOST=tcp://192.168.1.100:2375
-# DOCKER_CERT_PATH=/path/to/certs          # TLS 证书目录
-# DOCKER_TLS_VERIFY=true
+<h2 id="_8">配置示例</h2>
+<p>全栈部署使用<strong>根目录</strong> <code>.env</code>（参考根 <code>.env.example</code>，所有服务统一读取）；
+单服务本地开发参考 <code>python-sandbox/.env.example</code>。要点：</p>
+<pre><code class="language-bash"># .env 示例（节选）
+DB_PASSWORD=root                                # MySQL root 密码
+ADMIN_INTERNAL_TOKEN=change-me-...              # 管理端内部通道凭证（两侧一致，生产必改）
+SANDBOX_MAX_CONTAINERS=5                        # 最大活跃容器数
+SANDBOX_SESSION_TIMEOUT_MILLIS=3600000          # 会话 1 小时超时
+SANDBOX_MAX_CONTAINERS_BEHAVIOR=evict-oldest    # 超限驱逐最旧
+SANDBOX_PULL_IMAGE_ON_STARTUP=true              # 启动预拉取镜像
+DOCKER_HOST=                                    # 留空自动检测本地 Docker
+                                                # 远程: tcp://192.168.1.100:2375
+
+# AI 危险代码检测（CodeGuard）
+COMPOSE_PROFILES=detect-vllm                    # 推理服务 profile（三选一，留空不启动）
+BASE_MODEL=zjwan461/jarvis-coder                # 模型（构建期打入镜像）
+SANDBOX_CODEGUARD_DETECT_BASE_URL=http://code-detect:8000   # 推理服务地址
 </code></pre>
 <p>完整配置项、环境变量对照表以及远程 Docker 配置说明请参阅
-<a href="server/">python-sandbox/README.md</a>。</p>
-<h2 id="_7">许可证</h2>
-<p>MIT License</p>
+<a href="server/">服务端文档</a>；模型训练与推理部署见 <a href="ai-detect/">AI 危险代码检测</a>。</p>
+<h2 id="_9">文档导航</h2>
+<ul>
+<li><a href="server/">服务端文档</a> —— 接口、配置、远程 Docker、Shell 黑名单</li>
+<li><a href="ai-detect/">AI 危险代码检测</a> —— CodeGuard 双策略、模型训练、三种推理部署</li>
+<li><a href="sdk/">SDK 文档</a> —— Java / Python SDK 使用说明</li>
+<li><a href="request-flow/">调用链路</a> —— 请求处理全链路剖析</li>
+</ul>
+<h2 id="_10">许可证</h2>
+<p>MIT</p>
 
 
 

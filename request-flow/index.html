@@ -274,6 +274,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../ai-detect/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI危险代码检测
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../sdk/" class="md-nav__link">
         
   
@@ -938,6 +965,13 @@
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                    │                                        │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │             CodeGuardService（双策略危险检测编排）                     │   │
+│  │  ├─ 策略1 PythonCodeValidator（静态正则扫描，开关默认开）              │   │
+│  │  └─ 策略2 ModelCodeDetector ──HTTP──▶ 推理服务 :8000 /detect          │   │
+│  │       (Qwen2.5-Coder 微调模型判定，开关默认关，sys_config 即时可配)     │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │                          SandboxService                             │   │
 │  │              (核心业务逻辑，会话管理，Docker 操作封装)                  │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
@@ -962,18 +996,20 @@
 └─────────────────────────────────────────────────────────────────────────────┘
 </code></pre>
 <h2 id="_3">应用启动流程</h2>
-<p>应用启动时，<code>SandboxService.init()</code> 方法会执行以下初始化操作：</p>
-<pre><code>1. 创建 DockerClient
-   └─&gt; 配置 Docker 连接（host, cert, tls, api-version）
-   └─&gt; 执行 docker ping 验证连接
+<p>应用启动时，核心 Bean 依次完成初始化：</p>
+<pre><code>1. SandboxService.init()
+   ├─&gt; 创建 DockerClient
+   │   └─&gt; 配置 Docker 连接（host, cert, tls, api-version）
+   │   └─&gt; 执行 docker ping 验证连接
+   ├─&gt; 可选：预拉取镜像（pull-image-on-startup=true 时 docker pull）
+   └─&gt; 可选：创建默认容器（create-default-container-on-startup=true）
 
-2. 可选：预拉取镜像
-   └─&gt; 如果 pull-image-on-startup=true
-   └─&gt; 执行 docker pull 拉取配置的 Python 镜像
+2. RatelimitService.init()
+   └─&gt; 同步拉取限流规则与 sys_config 快照（失败不阻断启动，定时任务兜底）
 
-3. 可选：创建默认容器
-   └─&gt; 如果 create-default-container-on-startup=true
-   └─&gt; 创建名为 &quot;default&quot; 的会话容器
+3. CodeGuardService.init()
+   └─&gt; 同步拉取危险检测策略开关（codeguard.static/model/fail-open，
+       此后每 60s 定时刷新，管理端修改 sys_config 即时生效）
 </code></pre>
 <h2 id="_4">请求处理链路</h2>
 <h3 id="1">1. 创建会话</h3>
@@ -1019,7 +1055,6 @@ SandboxController.createSession()
 SandboxController.execPython(request)
   │
   ├─&gt; 从 request 获取 sessionId 和 code
-  │
   ├─&gt; sandboxService.runPythonCode(sessionId, code)
   │   │
   │   ├─&gt; getSession(sessionId)
@@ -1029,6 +1064,15 @@ SandboxController.execPython(request)
   │   │   │   └─&gt; dockerClient.inspectContainerCmd() 查询容器状态
   │   │   └─&gt; 更新 lastActivity 时间戳
   │   │
+  │   ├─&gt; codeGuardService.guard(code)   【执行前双策略危险检测】
+  │   │   ├─&gt; 策略1 静态校验（sys_config codeguard.static.enabled，默认开）
+  │   │   │   └─&gt; PythonCodeValidator.validate()：长度/预处理/三层扫描
+  │   │   └─&gt; 策略2 模型推理（sys_config codeguard.model.enabled，默认关）
+  │   │       ├─&gt; ModelCodeDetector.isDangerous()：HTTP POST /detect 调推理服务
+  │   │       └─&gt; 服务不可用时按 codeguard.model.fail-open 决定放行/拒绝
+  │   │   （任一策略判定危险 → 抛 SecurityException → 403 SECURITY_VIOLATION）
+  │   │
+  │   ├─&gt; 写入临时 Python 文件
   │   ├─&gt; 写入临时 Python 文件
   │   │   ├─&gt; 生成临时文件路径: /tmp/sandbox_{timestamp}.py
   │   │   └─&gt; 调用 writeFile() 将代码写入容器
@@ -1314,7 +1358,7 @@ GlobalExceptionHandler
 </tr>
 <tr>
 <td>SECURITY_VIOLATION</td>
-<td>Shell 命令安全验证失败</td>
+<td>安全校验失败：Shell 命令黑名单、Python 静态校验（BLOCKED_MODULE/BLOCKED_CALL/BLOCKED_FUNCTION/CODE_TOO_LONG）、CodeGuard 模型推理（MODEL_DETECTED_DANGEROUS/MODEL_DETECTION_UNAVAILABLE）</td>
 </tr>
 <tr>
 <td>COMMAND_TOO_LONG</td>
@@ -1394,8 +1438,23 @@ HealthController.health()
 <td>unix:///var/run/docker.sock</td>
 <td>Docker 连接地址</td>
 </tr>
+<tr>
+<td>sandbox.code-guard.detect-base-url</td>
+<td>http://code-detect:8000</td>
+<td>模型推理检测服务地址</td>
+</tr>
+<tr>
+<td>sandbox.code-guard.detect-timeout-millis</td>
+<td>5000</td>
+<td>推理服务调用超时</td>
+</tr>
 </tbody>
 </table>
+<blockquote>
+<p>CodeGuard 三个<strong>策略开关</strong>（<code>codeguard.static.enabled</code> / <code>codeguard.model.enabled</code> /
+<code>codeguard.model.fail-open</code>）不在 application.yml，存于 <code>sys_config</code> 表，
+管理端「系统设置」页面配置。详见 <a href="../ai-detect/">AI 危险代码检测</a>。</p>
+</blockquote>
 
 
 

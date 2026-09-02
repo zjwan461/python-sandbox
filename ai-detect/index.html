@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://zjwan461.github.io/python-sandbox/sdk/">
+        <link rel="canonical" href="https://zjwan461.github.io/python-sandbox/ai-detect/">
       
       
-        <link rel="prev" href="../ai-detect/">
+        <link rel="prev" href="../server/">
       
       
-        <link rel="next" href="../request-flow/">
+        <link rel="next" href="../sdk/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>SDK文档 - python-sandbox</title>
+        <title>AI危险代码检测 - python-sandbox</title>
       
     
     
@@ -66,7 +66,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#sandbox-sdk" class="md-skip">
+        <a href="#ai" class="md-skip">
           Skip to content
         </a>
       
@@ -102,7 +102,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              SDK文档
+              AI危险代码检测
             
           </span>
         </div>
@@ -273,33 +273,6 @@
       
   
   
-  
-  
-    <li class="md-nav__item">
-      <a href="../ai-detect/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    AI危险代码检测
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
     
   
   
@@ -319,7 +292,7 @@
   <span class="md-ellipsis">
     
   
-    SDK文档
+    AI危险代码检测
   
 
     
@@ -337,7 +310,7 @@
   <span class="md-ellipsis">
     
   
-    SDK文档
+    AI危险代码检测
   
 
     
@@ -363,34 +336,83 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#_1" class="md-nav__link">
+  <a href="#codeguard" class="md-nav__link">
     <span class="md-ellipsis">
       
-        快速开始
+        双策略架构（CodeGuard）
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="快速开始">
+    <nav class="md-nav" aria-label="双策略架构（CodeGuard）">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#java-sdk" class="md-nav__link">
+  <a href="#1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Java SDK
+        策略1：静态校验
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Java SDK">
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        策略2：模型推理
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        策略开关（管理端配置）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#jarvis-coder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        检测模型：Jarvis-Coder
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="检测模型：Jarvis-Coder">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#train" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        训练流水线（train/ 目录）
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        添加依赖
+        推理服务：三种部署方案
       
     </span>
   </a>
@@ -398,214 +420,59 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#docker-compose-profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        全栈编排（docker-compose profile）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vllm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        vLLM 调优参数
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        基本使用
+        启用步骤（端到端）
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#-try-with-resources" class="md-nav__link">
-    <span class="md-ellipsis">
       
-        高级用法 - try-with-resources
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#python-sdk" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Python SDK
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Python SDK">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
+        <li class="md-nav__item">
   <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
-        安装
+        排障速查
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
+      
+        <li class="md-nav__item">
   <a href="#_5" class="md-nav__link">
     <span class="md-ellipsis">
       
-        基本使用
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_6" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        异步客户端
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        不使用上下文管理器
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#api" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        API 参考
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="API 参考">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_8" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        通用方法
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_9" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        代码执行
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#pip" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        pip 包管理
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_10" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        文件操作
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_11" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        异常处理
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="异常处理">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#java" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Java
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#python" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Python
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_12" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        环境变量
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_13" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        许可证
+        延伸阅读（仓库内文档）
       
     </span>
   </a>
@@ -616,6 +483,33 @@
   
 </nav>
       
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SDK文档
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -674,34 +568,83 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#_1" class="md-nav__link">
+  <a href="#codeguard" class="md-nav__link">
     <span class="md-ellipsis">
       
-        快速开始
+        双策略架构（CodeGuard）
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="快速开始">
+    <nav class="md-nav" aria-label="双策略架构（CodeGuard）">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#java-sdk" class="md-nav__link">
+  <a href="#1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Java SDK
+        策略1：静态校验
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Java SDK">
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        策略2：模型推理
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        策略开关（管理端配置）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#jarvis-coder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        检测模型：Jarvis-Coder
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="检测模型：Jarvis-Coder">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#train" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        训练流水线（train/ 目录）
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        添加依赖
+        推理服务：三种部署方案
       
     </span>
   </a>
@@ -709,214 +652,59 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#docker-compose-profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        全栈编排（docker-compose profile）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vllm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        vLLM 调优参数
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        基本使用
+        启用步骤（端到端）
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#-try-with-resources" class="md-nav__link">
-    <span class="md-ellipsis">
       
-        高级用法 - try-with-resources
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#python-sdk" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Python SDK
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Python SDK">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
+        <li class="md-nav__item">
   <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
-        安装
+        排障速查
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
+      
+        <li class="md-nav__item">
   <a href="#_5" class="md-nav__link">
     <span class="md-ellipsis">
       
-        基本使用
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_6" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        异步客户端
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        不使用上下文管理器
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#api" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        API 参考
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="API 参考">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_8" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        通用方法
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_9" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        代码执行
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#pip" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        pip 包管理
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_10" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        文件操作
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_11" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        异常处理
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="异常处理">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#java" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Java
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#python" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Python
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_12" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        环境变量
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_13" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        许可证
+        延伸阅读（仓库内文档）
       
     </span>
   </a>
@@ -943,325 +731,292 @@
   
 
 
-<h1 id="sandbox-sdk">Sandbox SDK</h1>
-<p>Python Sandbox 的官方客户端 SDK，提供 Java 和 Python 两种语言的封装。</p>
+<h1 id="ai">AI 危险代码检测</h1>
+<p>本文档说明 Python Sandbox 的双策略危险代码检测体系（CodeGuard）：执行前拦截链路的编排方式、
+策略开关的配置入口，以及底层微调模型（Jarvis-Coder）的训练与三种推理服务部署方案。</p>
+<h2 id="codeguard">双策略架构（CodeGuard）</h2>
+<p>执行 Python 代码（<code>POST /api/sandbox/exec/python</code>）前，<code>CodeGuardService</code>
+串联两个<strong>互相独立、可分别开关</strong>的检测策略，任一命中即拒绝执行（HTTP 403 <code>SECURITY_VIOLATION</code>）：</p>
+<pre><code>                     ┌─ 策略1 静态校验 ── PythonCodeValidator（正则三层扫描）
+runPythonCode ──guard─┤        开关: codeguard.static.enabled（默认开）
+                     └─ 策略2 模型推理 ── HTTP 调用微调模型推理服务（POST /detect）
+                              开关: codeguard.model.enabled（默认关）
+                              降级: codeguard.model.fail-open（推理服务不可用时放行/拒绝）
+</code></pre>
+<h3 id="1">策略1：静态校验</h3>
+<p><code>PythonCodeValidator</code> 采用"预处理 + 正则静态分析"：</p>
+<ol>
+<li><strong>长度限制</strong>：防止超大代码攻击（<code>SANDBOX_PYTHON_CODE_MAX_LENGTH</code>，默认 100KB）</li>
+<li><strong>字符串/注释剥离</strong>：避免误判字面量中的危险词</li>
+<li><strong>三层扫描</strong>：危险模块导入（shutil/subprocess/ctypes/socket 等）、
+   危险属性调用（os.system/os.remove/shutil.rmtree 等）、
+   危险内置函数（eval/exec/compile/<strong>import</strong>）</li>
+<li>支持经环境变量追加自定义黑名单（与默认黑名单合并生效）</li>
+</ol>
+<h3 id="2">策略2：模型推理</h3>
+<p><code>ModelCodeDetector</code> 经 HTTP 调用推理服务（compose 网络别名 <code>code-detect:8000</code>），
+由 Qwen2.5-Coder 微调模型判定代码危险性。相比静态规则，模型能识别<strong>语义级危险</strong>
+（变量传参、字符串拼接混淆、未见过的危险组合），与静态黑名单互为补充。</p>
+<h3 id="_1">策略开关（管理端配置）</h3>
+<p>三个开关存于 <code>sys_config</code> 表，在管理端「系统设置」页面即时修改：</p>
+<table>
+<thead>
+<tr>
+<th>稳定键</th>
+<th>类型</th>
+<th>默认</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>codeguard.static.enabled</code></td>
+<td>BOOLEAN</td>
+<td><code>true</code></td>
+<td>静态校验策略开关</td>
+</tr>
+<tr>
+<td><code>codeguard.model.enabled</code></td>
+<td>BOOLEAN</td>
+<td><code>false</code></td>
+<td>模型推理策略开关（需推理服务在线后开启）</td>
+</tr>
+<tr>
+<td><code>codeguard.model.fail-open</code></td>
+<td>BOOLEAN</td>
+<td><code>true</code></td>
+<td>推理服务不可用时放行（false=拒绝执行，安全优先）</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>服务端每 60s 定时拉取（复用 <code>sandbox.ratelimit.refresh-interval-millis</code>），
+  拉取失败保留旧缓存（fail-open）</li>
+<li><code>sys_config</code> 缺键时回落到本地配置（<code>sandbox.code-guard.*-fallback</code>）</li>
+<li>推理服务<strong>地址与超时属基础设施配置</strong>，不入库：<code>SANDBOX_CODEGUARD_DETECT_BASE_URL</code>
+  （默认 <code>http://code-detect:8000</code>）、<code>SANDBOX_CODEGUARD_DETECT_TIMEOUT_MILLIS</code>（默认 5000）</li>
+</ul>
+<h2 id="jarvis-coder">检测模型：Jarvis-Coder</h2>
+<p>基于 <strong>Qwen2.5-Coder-1.5B-Instruct</strong> 的 LoRA（QLoRA 4bit）微调模型，
+任务为二分类判定：给定代码片段，仅输出 <code>DANGEROUS</code> 或 <code>SAFE</code>。
+发布仓库：<code>zjwan461/jarvis-coder</code>（HuggingFace）。</p>
+<h3 id="train">训练流水线（train/ 目录）</h3>
+<table>
+<thead>
+<tr>
+<th>步骤</th>
+<th>脚本</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. 环境自检</td>
+<td><code>check_env.py</code></td>
+<td>GPU 算力 / bf16 支持</td>
+</tr>
+<tr>
+<td>2. 数据集合成</td>
+<td><code>generate_dataset.py</code></td>
+<td>调用百炼 API 生成三类样本（危险 1200 / 安全 1200 / Hard-Negative 1000）</td>
+</tr>
+<tr>
+<td>3. 数据集质检</td>
+<td><code>check_dataset.py</code></td>
+<td>字段与标签合法性校验，坏样本剥离</td>
+</tr>
+<tr>
+<td>4. QLoRA 微调</td>
+<td><code>train_sft_lora.py</code></td>
+<td>4bit NF4 量化 + LoRA(r=8)，3 epochs，训练完自动合并 LoRA → 完整模型</td>
+</tr>
+<tr>
+<td>5. 离线评估</td>
+<td><code>evaluate_testset.py</code></td>
+<td>temperature=0 逐条推理测试集，输出准确率与错误样本</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Hard-Negative 样本</strong>是数据设计的关键：危险命令出现在注释或"仅打印不执行"的字符串中
+（标签 <code>SAFE</code>），防止模型对危险词"见词色变"造成误杀。</p>
 <blockquote>
-<p>提示：<code>execPython</code> 在服务端受 <strong>CodeGuard 双策略危险检测</strong>保护（静态校验 + 可选模型推理），
-危险代码会收到 HTTP 403 <code>SECURITY_VIOLATION</code>，SDK 侧表现为对应异常，请做好错误处理
-（见 <code>usage/11_error_handling.py</code> 示例）。策略说明详见 <a href="../ai-detect/">AI 危险代码检测</a>。</p>
+<p>⚠️ 纪律：<code>test.jsonl</code> 全程不参与训练与调参，仅最终评估使用一次。</p>
 </blockquote>
-<h2 id="_1">快速开始</h2>
-<h3 id="java-sdk">Java SDK</h3>
-<h4 id="_2">添加依赖</h4>
-<p>在 <code>pom.xml</code> 中添加：</p>
-<pre><code class="language-xml">&lt;dependency&gt;
-    &lt;groupId&gt;io.github.sandbox&lt;/groupId&gt;
-    &lt;artifactId&gt;sdk-java&lt;/artifactId&gt;
-    &lt;version&gt;1.0.0&lt;/version&gt;
-&lt;/dependency&gt;
-</code></pre>
-<h4 id="_3">基本使用</h4>
-<pre><code class="language-java">import io.github.sandbox.sdk.SandboxClient;
-import io.github.sandbox.sdk.dto.SandboxResponse;
-
-public class Main {
-    public static void main(String[] args) throws Exception {
-        // 创建客户端
-        SandboxClient client = new SandboxClient(
-            &quot;http://localhost:8080&quot;,
-            &quot;sandbox-secret-key&quot;
-        );
-
-        // 检查服务状态
-        if (client.isHealth()) {
-            System.out.println(&quot;Sandbox is ready!&quot;);
-        }
-
-        // 创建会话
-        String sessionId = client.createSession();
-        System.out.println(&quot;Session created: &quot; + sessionId);
-
-        // 安装包
-        SandboxResponse installResult = client.pipInstall(sessionId, &quot;requests&quot;);
-        System.out.println(&quot;Install exit code: &quot; + installResult.getExitCode());
-
-        // 执行 Python 代码
-        SandboxResponse result = client.execPython(sessionId, 
-            &quot;import requests\nprint(requests.__version__)&quot;
-        );
-        System.out.println(&quot;Output: &quot; + result.getStdout());
-
-        // 执行 Shell 命令
-        SandboxResponse shellResult = client.execShell(sessionId, &quot;pip list&quot;);
-        System.out.println(shellResult.getStdout());
-
-        // 文件操作
-        client.writeFile(sessionId, &quot;/tmp/hello.txt&quot;, &quot;Hello from Java SDK!&quot;);
-        String content = client.readFile(sessionId, &quot;/tmp/hello.txt&quot;);
-        System.out.println(content);
-
-        // 清理会话
-        client.deleteSession(sessionId);
-    }
-}
-</code></pre>
-<h4 id="-try-with-resources">高级用法 - try-with-resources</h4>
-<pre><code class="language-java">try (SandboxClient client = new SandboxClient(url, apiKey)) {
-    String sessionId = client.createSession();
-    try {
-        client.execPython(sessionId, &quot;print('Working!')&quot;);
-    } finally {
-        client.deleteSession(sessionId);
-    }
-} // 连接自动关闭
-</code></pre>
-<hr />
-<h3 id="python-sdk">Python SDK</h3>
-<h4 id="_4">安装</h4>
-<p>从 PyPI（发布后）：</p>
-<pre><code class="language-bash">pip install python-sandbox-sdk
-
-# 安装异步支持（可选）
-pip install python-sandbox-sdk[async]
-</code></pre>
-<p>或从本地源码：</p>
-<pre><code class="language-bash">cd sdk/python-sandbox-sdk
-pip install -e .
-</code></pre>
-<h4 id="_5">基本使用</h4>
-<pre><code class="language-python">from python_sandbox_sdk import SandboxClient
-
-# 创建客户端（支持上下文管理器）
-with SandboxClient(&quot;http://localhost:8080&quot;, &quot;sandbox-secret-key&quot;) as client:
-    # 检查服务状态
-    if client.is_health():
-        print(&quot;Sandbox is ready!&quot;)
-
-    # 创建会话
-    session_id = client.create_session()
-    print(f&quot;Session created: {session_id}&quot;)
-
-    # 安装包
-    result = client.pip_install(session_id, &quot;requests&quot;)
-    print(f&quot;Install exit code: {result.exit_code}&quot;)
-
-    # 执行 Python 代码
-    result = client.exec_python(session_id, 
-        &quot;import requests\nprint(requests.__version__)&quot;
-    )
-    print(f&quot;Output:\n{result.stdout}&quot;)
-
-    # 执行 Shell 命令
-    result = client.exec_shell(session_id, &quot;pip list&quot;)
-    print(result.stdout)
-
-    # 文件操作
-    client.write_file(session_id, &quot;/tmp/hello.txt&quot;, &quot;Hello from Python SDK!&quot;)
-    content = client.read_file(session_id, &quot;/tmp/hello.txt&quot;)
-    print(content)
-
-    # 上传下载文件
-    file_data = b&quot;Binary content here&quot;
-    client.upload_file(session_id, &quot;/tmp/binary.bin&quot;, file_data)
-    downloaded = client.download_file(session_id, &quot;/tmp/binary.bin&quot;)
-    assert downloaded == file_data
-
-    # 清理会话
-    client.delete_session(session_id)
-</code></pre>
-<h4 id="_6">异步客户端</h4>
-<p>Python SDK 还提供完整的异步客户端 <code>AsyncSandboxClient</code>，基于 <code>aiohttp</code> 实现：</p>
-<pre><code class="language-python">import asyncio
-from python_sandbox_sdk import AsyncSandboxClient
-
-async def main():
-    async with AsyncSandboxClient(&quot;http://localhost:8080&quot;, &quot;sandbox-secret-key&quot;) as client:
-        # 检查服务状态
-        if await client.is_health():
-            print(&quot;Sandbox is ready!&quot;)
-
-        # 创建会话
-        session_id = await client.create_session()
-        print(f&quot;Session created: {session_id}&quot;)
-
-        # 执行 Python 代码
-        result = await client.exec_python(session_id, &quot;print('Async works!')&quot;)
-        print(f&quot;Output: {result.stdout}&quot;)
-
-        # 文件操作
-        await client.write_file(session_id, &quot;/tmp/async.txt&quot;, &quot;Async content&quot;)
-        content = await client.read_file(session_id, &quot;/tmp/async.txt&quot;)
-        print(content)
-
-        # 清理会话
-        await client.delete_session(session_id)
-
-asyncio.run(main())
-</code></pre>
-<p>异步客户端的优势：
-- 所有方法均为 <code>async</code>，支持 <code>await</code> 调用
-- 支持 <code>async with</code> 上下文管理器
-- 适合与 <code>asyncio</code> 生态集成，实现高并发场景</p>
-<h4 id="_7">不使用上下文管理器</h4>
-<pre><code class="language-python">client = SandboxClient(&quot;http://localhost:8080&quot;, &quot;sandbox-secret-key&quot;)
-try:
-    session_id = client.create_session()
-    try:
-        client.exec_python(session_id, &quot;print('Working!')&quot;)
-    finally:
-        client.delete_session(session_id)
-finally:
-    client.close()
-</code></pre>
-<hr />
-<h2 id="api">API 参考</h2>
-<h3 id="_8">通用方法</h3>
+<h3 id="_2">推理服务：三种部署方案</h3>
+<p>三种方案对上游暴露<strong>完全一致的接口</strong>（<code>POST /detect</code>），可互为替代，切换仅需改 compose profile：</p>
 <table>
 <thead>
 <tr>
-<th>方法</th>
+<th>维度</th>
+<th>① CPU 版</th>
+<th>② CUDA 版</th>
+<th>③ vLLM 版 ⭐</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>推理引擎</td>
+<td>transformers</td>
+<td>transformers</td>
+<td>vLLM（PagedAttention）</td>
+</tr>
+<tr>
+<td>服务入口</td>
+<td><code>infer/api_server.py</code></td>
+<td><code>infer/api_server.py</code></td>
+<td><code>infer/vllm_api_server.py</code></td>
+</tr>
+<tr>
+<td>Dockerfile</td>
+<td><code>Dockerfile.cpu</code></td>
+<td><code>Dockerfile.cuda</code></td>
+<td><code>Dockerfile.vllm</code></td>
+</tr>
+<tr>
+<td>硬件</td>
+<td>无 GPU</td>
+<td>NVIDIA GPU + CUDA 12.8</td>
+<td>NVIDIA GPU，显存 ≥ 8GB</td>
+</tr>
+<tr>
+<td>操作系统</td>
+<td>跨平台</td>
+<td>跨平台</td>
+<td>仅 Linux（Windows 走 WSL2）</td>
+</tr>
+<tr>
+<td>并发吞吐</td>
+<td>低</td>
+<td>中</td>
+<td><strong>高</strong>（continuous batching）</td>
+</tr>
+<tr>
+<td>适用</td>
+<td>功能验证 / CI</td>
+<td>单卡小流量</td>
+<td><strong>生产环境</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>接口契约</strong>（三方案一致，默认监听 <code>:8000</code>）：</p>
+<pre><code>POST /detect
+Content-Type: application/json
+
+请求体  { &quot;code&quot;: &quot;&lt;待检测代码片段&gt;&quot; }
+响应体  { &quot;label&quot;: &quot;SAFE&quot; | &quot;DANGEROUS&quot;, &quot;raw_output&quot;: &quot;&lt;模型原始输出&gt;&quot; }
+</code></pre>
+<p><strong>模型内置镜像</strong>：三个 Dockerfile 均在构建期执行 <code>hf download ${BASE_MODEL}</code>
+将权重打进镜像（运行零下载）；换模型需 <code>--build-arg BASE_MODEL=xxx</code> 重建。</p>
+<h3 id="docker-compose-profile">全栈编排（docker-compose profile）</h3>
+<p>三个推理服务已集成到根 <code>docker-compose.yml</code>，<strong>默认均不启动</strong>，三选一：</p>
+<pre><code class="language-bash"># 方式 A：根 .env 设置 COMPOSE_PROFILES=detect-vllm
+docker compose up -d --build
+
+# 方式 B：命令行临时指定
+docker compose --profile detect-cpu up -d --build    # 或 detect-cuda / detect-vllm
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>compose 服务</th>
+<th>profile</th>
+<th>端口</th>
+<th>网络别名</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>detect-cpu</code></td>
+<td><code>detect-cpu</code></td>
+<td><code>DETECT_PORT</code>（默认 8000）</td>
+<td><code>code-detect</code></td>
+</tr>
+<tr>
+<td><code>detect-cuda</code></td>
+<td><code>detect-cuda</code></td>
+<td>同上</td>
+<td><code>code-detect</code></td>
+</tr>
+<tr>
+<td><code>detect-vllm</code></td>
+<td><code>detect-vllm</code></td>
+<td>同上</td>
+<td><code>code-detect</code></td>
+</tr>
+</tbody>
+</table>
+<p>GPU 版通过 <code>deploy.resources.reservations.devices</code> 申请 nvidia 设备（宿主机需 nvidia-container-toolkit）。</p>
+<h3 id="vllm">vLLM 调优参数</h3>
+<table>
+<thead>
+<tr>
+<th>环境变量</th>
+<th>默认</th>
 <th>说明</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>createSession()</code> / <code>create_session()</code></td>
-<td>创建新的沙箱会话</td>
+<td><code>MAX_MODEL_LEN</code></td>
+<td><code>1024</code></td>
+<td>上下文总长。输出仅几个 token，窗口几乎全部留给<strong>输入代码</strong>；代码普遍短可降到 512 省显存</td>
 </tr>
 <tr>
-<td><code>deleteSession(id)</code> / <code>delete_session(id)</code></td>
-<td>删除会话并清理容器</td>
-</tr>
-<tr>
-<td><code>isHealth()</code> / <code>is_health()</code></td>
-<td>检查服务是否可用</td>
+<td><code>GPU_MEMORY_UTILIZATION</code></td>
+<td><code>0.85</code></td>
+<td>vLLM 显存预留比例，OOM 时下调</td>
 </tr>
 </tbody>
 </table>
-<h3 id="_9">代码执行</h3>
+<h2 id="_3">启用步骤（端到端）</h2>
+<ol>
+<li>启动推理服务：<code>.env</code> 设置 <code>COMPOSE_PROFILES=detect-vllm</code> 后 <code>docker compose up -d --build</code></li>
+<li>冒烟验证：<code>curl -X POST http://localhost:8000/detect -H "Content-Type: application/json" -d '{"code":"import os\nos.remove(\"/etc/shadow\")"}'</code> → <code>label=DANGEROUS</code></li>
+<li>管理端「系统设置」打开 <code>codeguard.model.enabled</code></li>
+<li>等待 ≤ 60s 定时拉取（或重启 sandbox-api），sandbox-api 日志出现
+   <code>CodeGuard 策略开关刷新成功: ... model=true ...</code> 即生效</li>
+</ol>
+<h2 id="_4">排障速查</h2>
 <table>
 <thead>
 <tr>
-<th>方法</th>
-<th>参数</th>
-<th>返回</th>
-<th>说明</th>
+<th>现象</th>
+<th>处理</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>execPython(id, code)</code> / <code>exec_python(id, code)</code></td>
-<td>sessionId, Python 代码</td>
-<td>CommandResult</td>
-<td>执行 Python 代码</td>
+<td>vLLM 在 Windows 装不上</td>
+<td>vLLM 仅支持 Linux，用 WSL2 或 Docker</td>
 </tr>
 <tr>
-<td><code>execShell(id, cmd)</code> / <code>exec_shell(id, cmd)</code></td>
-<td>sessionId, Shell 命令</td>
-<td>CommandResult</td>
-<td>执行 Shell 命令</td>
+<td>vLLM 启动 OOM</td>
+<td>下调 <code>GPU_MEMORY_UTILIZATION</code> 或 <code>MAX_MODEL_LEN</code></td>
+</tr>
+<tr>
+<td><code>/detect</code> 返回 500</td>
+<td>多为运行期 <code>BASE_MODEL</code> 与镜像构建时不一致，导致加载失败</td>
+</tr>
+<tr>
+<td>模型误杀 <code>print("rm -rf /")</code></td>
+<td>属模型侧误判，补充 Hard-Negative 样本重训</td>
+</tr>
+<tr>
+<td>CodeGuard 不生效</td>
+<td>确认开关为 true 且已过 ≤60s 拉取周期；核对 <code>SANDBOX_CODEGUARD_DETECT_BASE_URL</code> 可达性</td>
+</tr>
+<tr>
+<td>CPU 版频繁超时降级</td>
+<td>CPU 推理秒级延迟，生产务必使用 vLLM 版</td>
 </tr>
 </tbody>
 </table>
-<h3 id="pip">pip 包管理</h3>
-<table>
-<thead>
-<tr>
-<th>方法</th>
-<th>参数</th>
-<th>返回</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>pipInstall(id, pkg)</code> / <code>pip_install(id, pkg)</code></td>
-<td>sessionId, 包名</td>
-<td>CommandResult</td>
-<td>安装包</td>
-</tr>
-<tr>
-<td><code>pipUninstall(id, pkg)</code> / <code>pip_uninstall(id, pkg)</code></td>
-<td>sessionId, 包名</td>
-<td>CommandResult</td>
-<td>卸载包</td>
-</tr>
-<tr>
-<td><code>pipList(id)</code> / <code>pip_list(id)</code></td>
-<td>sessionId</td>
-<td>String</td>
-<td>列出已安装包</td>
-</tr>
-</tbody>
-</table>
-<h3 id="_10">文件操作</h3>
-<table>
-<thead>
-<tr>
-<th>方法</th>
-<th>参数</th>
-<th>返回</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>writeFile(id, path, content)</code> / <code>write_file(id, path, content)</code></td>
-<td>sessionId, 路径, 内容</td>
-<td>void</td>
-<td>写入文件</td>
-</tr>
-<tr>
-<td><code>readFile(id, path)</code> / <code>read_file(id, path)</code></td>
-<td>sessionId, 路径</td>
-<td>String</td>
-<td>读取文本文件</td>
-</tr>
-<tr>
-<td><code>uploadFile(id, path, data)</code> / <code>upload_file(id, path, data)</code></td>
-<td>sessionId, 路径, 字节数据</td>
-<td>void</td>
-<td>上传二进制文件</td>
-</tr>
-<tr>
-<td><code>downloadFile(id, path)</code> / <code>download_file(id, path)</code></td>
-<td>sessionId, 路径</td>
-<td>bytes</td>
-<td>下载文件</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="_11">异常处理</h2>
-<h3 id="java">Java</h3>
-<pre><code class="language-java">try {
-    client.execPython(sessionId, &quot;...&quot;);
-} catch (IOException e) {
-    // HTTP 请求错误（超时、连接失败等）
-    System.err.println(&quot;Request failed: &quot; + e.getMessage());
-}
-</code></pre>
-<h3 id="python">Python</h3>
-<pre><code class="language-python">from python_sandbox_sdk import ApiRequestError
-
-try:
-    client.exec_python(session_id, &quot;...&quot;)
-except ApiRequestError as e:
-    # HTTP 4xx/5xx 错误
-    print(f&quot;API Error ({e.status_code}): {e}&quot;)
-except requests.RequestException as e:
-    # 网络错误（超时、连接失败等）
-    print(f&quot;Network error: {e}&quot;)
-</code></pre>
-<hr />
-<h2 id="_12">环境变量</h2>
-<p>SDK 配置也可以通过环境变量指定（适用于 docker-compose 部署场景）：</p>
-<pre><code class="language-bash">export SANDBOX_API_KEY=my-secret-key
-export SANDBOX_BASE_URL=http://my-server:8080
-</code></pre>
-<hr />
-<h2 id="_13">许可证</h2>
-<p>MIT License</p>
+<h2 id="_5">延伸阅读（仓库内文档）</h2>
+<ul>
+<li>根 <code>README.md</code> · 「双策略危险检测（CodeGuard）」章节 —— 平台视角总览</li>
+<li><code>train/README.md</code> —— 数据集合成 / QLoRA 微调 / 评估的完整训练手册</li>
+<li><code>train/infer/README.md</code> —— 三种推理部署方案的详细手册（含裸机 pip 安装方式）</li>
+</ul>
 
 
 
