@@ -12,6 +12,7 @@ import io.github.sandbox.admin.rbac.mapper.AdminMenuMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -45,8 +46,10 @@ public class AdminMenuService {
     public List<MenuRouteVO> routes() {
         AdminLoginUser current = SecurityUtils.getLoginUser();
         List<AdminMenu> authorized = adminMenuMapper.selectMenusByUserId(current.getUserId());
+        // T-0039：isVisible=0 的目录/菜单不再进入当前用户可见路由（显隐切换立即生效）
         List<AdminMenu> routeNodes = authorized.stream()
                 .filter(m -> TYPE_DIR.equals(m.getMenuType()) || TYPE_MENU.equals(m.getMenuType()))
+                .filter(m -> m.getIsVisible() == null || m.getIsVisible() == 1)
                 .sorted(Comparator.comparing(AdminMenu::getParentId).thenComparing(AdminMenu::getSortOrder))
                 .collect(Collectors.toList());
         return buildRouteTree(routeNodes, 0L);
@@ -94,6 +97,57 @@ public class AdminMenuService {
                         .inSql(AdminMenu::getId,
                                 "SELECT menu_id FROM admin_role_menu WHERE role_id = " + roleId))
                 .stream().map(AdminMenu::getId).toList();
+    }
+
+    /**
+     * 批量排序（T-0039，FR-MENU-03）：前端拖拽后提交 [{id, sortOrder}]，
+     * 同一父级内的新次序按 sortOrder 升序表达；保存后立即反映到树与路由（routes 按 sortOrder 排序）。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void batchSort(List<Long> orderedIds) {
+        if (orderedIds == null || orderedIds.isEmpty()) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "排序清单不能为空");
+        }
+        // 同批提交的节点必须属于同一父级，防止跨级乱序
+        Long parentId = null;
+        int index = 0;
+        for (Long id : orderedIds) {
+            AdminMenu menu = adminMenuMapper.selectById(id);
+            if (menu == null) {
+                throw new BusinessException(ErrorCode.DATA_NOT_FOUND, "菜单不存在: " + id);
+            }
+            if (parentId == null) {
+                parentId = menu.getParentId() == null ? 0L : menu.getParentId();
+            } else if (!parentId.equals(menu.getParentId() == null ? 0L : menu.getParentId())) {
+                throw new BusinessException(ErrorCode.PARAM_ERROR, "批量排序仅支持同一父级内的节点");
+            }
+            AdminMenu update = new AdminMenu();
+            update.setId(id);
+            update.setSortOrder(index++ * 10);
+            adminMenuMapper.updateById(update);
+        }
+    }
+
+    /**
+     * 可见性切换（T-0039，FR-MENU-03）：目录/菜单显隐即时生效；
+     * routes 端点按 isVisible=1 收敛（前端侧边栏隐藏，路由仍可按直接地址访问时由权限码兜底）。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void changeVisible(Long id, Integer isVisible) {
+        if (isVisible == null || (isVisible != 0 && isVisible != 1)) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "显隐仅支持 0=隐藏 1=显示");
+        }
+        AdminMenu existing = adminMenuMapper.selectById(id);
+        if (existing == null) {
+            throw new BusinessException(ErrorCode.DATA_NOT_FOUND, "菜单不存在");
+        }
+        if (TYPE_BUTTON.equals(existing.getMenuType())) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "按钮型无显隐语义");
+        }
+        AdminMenu update = new AdminMenu();
+        update.setId(id);
+        update.setIsVisible(isVisible);
+        adminMenuMapper.updateById(update);
     }
 
     // ===================== internal =====================

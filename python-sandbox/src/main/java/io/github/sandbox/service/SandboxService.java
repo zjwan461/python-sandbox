@@ -18,6 +18,7 @@ import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
 import com.github.dockerjava.transport.DockerHttpClient;
 
 import io.github.sandbox.config.SandboxConfig;
+import io.github.sandbox.context.AuthContext;
 import io.github.sandbox.exception.SandboxException;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -162,7 +163,13 @@ public class SandboxService {
             String containerId = response.getId();
             dockerClient.startContainerCmd(containerId).exec();
 
+            // 登记会话归属（T-0025）：从当前请求鉴权上下文捕获 clientId/apiKeyId/ownerUserId；
+            // 无鉴权上下文（默认容器启动、内部调用）时归属为 NULL，不伪造。
             SandboxSession session = new SandboxSession(sessionId, containerId, containerName, Instant.now());
+            AuthContext.Principal principal = AuthContext.getPrincipal();
+            if (principal != null) {
+                session.setOwnerId(principal.getClientId(), principal.getApiKeyId(), principal.getOwnerUserId());
+            }
             sessions.put(sessionId, session);
 
             log.info("Created and started sandbox container: {} ({})", containerName,
@@ -332,6 +339,24 @@ public class SandboxService {
         SandboxSession session = sessions.remove(sessionId);
         if (session == null)
             return;
+        destroySessionContainer(session);
+    }
+
+    /**
+     * 内部强销（T-0025/T-0026）：销毁指定会话并回执剩余会话数（默认决策 #7）。
+     *
+     * @return true=会话存在且已执行销毁；false=会话不存在
+     */
+    public boolean destroySession(String sessionId) {
+        SandboxSession session = sessions.remove(sessionId);
+        if (session == null) {
+            return false;
+        }
+        destroySessionContainer(session);
+        return true;
+    }
+
+    private void destroySessionContainer(SandboxSession session) {
         try {
             dockerClient.killContainerCmd(session.containerId).exec();
         } catch (Exception e) {
@@ -343,6 +368,48 @@ public class SandboxService {
         } catch (Exception e) {
             log.error("Remove failed: {}", e.getMessage());
         }
+    }
+
+    /**
+     * 活跃会话内存快照（T-0025，design.md §8.4）。
+     * 只枚举当前进程内 sessions；服务重启后无法枚举的孤儿会话不被伪造。
+     */
+    public List<SessionSnapshot> listSessionSnapshots() {
+        List<SessionSnapshot> list = new ArrayList<>();
+        for (SandboxSession s : sessions.values()) {
+            SessionSnapshot snap = new SessionSnapshot();
+            snap.setSessionId(s.sessionId);
+            snap.setContainerId(s.containerId);
+            snap.setContainerName(s.name);
+            snap.setCreateTime(s.createTime);
+            snap.setLastActiveTime(s.lastActivity);
+            snap.setIsDefault(DEFAULT_SESSION_ID.equals(s.sessionId));
+            snap.setOwnerClientId(s.ownerClientId);
+            snap.setOwnerApiKeyId(s.ownerApiKeyId);
+            snap.setOwnerUserId(s.ownerUserId);
+            list.add(snap);
+        }
+        list.sort(Comparator.comparing(SessionSnapshot::getCreateTime));
+        return list;
+    }
+
+    /** 查询单个活跃会话快照；不存在返回 null（内部详情接口 404 语义用） */
+    public SessionSnapshot findSessionSnapshot(String sessionId) {
+        SandboxSession s = sessions.get(sessionId);
+        if (s == null) {
+            return null;
+        }
+        SessionSnapshot snap = new SessionSnapshot();
+        snap.setSessionId(s.sessionId);
+        snap.setContainerId(s.containerId);
+        snap.setContainerName(s.name);
+        snap.setCreateTime(s.createTime);
+        snap.setLastActiveTime(s.lastActivity);
+        snap.setIsDefault(DEFAULT_SESSION_ID.equals(s.sessionId));
+        snap.setOwnerClientId(s.ownerClientId);
+        snap.setOwnerApiKeyId(s.ownerApiKeyId);
+        snap.setOwnerUserId(s.ownerUserId);
+        return snap;
     }
 
     private void pullImageOnStartup() {
@@ -557,14 +624,44 @@ public class SandboxService {
         final String sessionId;
         final String containerId;
         final String name;
+        final Instant createTime;
         private Instant lastActivity;
+        /** 归属客户端（client_app.id；无鉴权上下文为 null）（T-0025） */
+        private Long ownerClientId;
+        /** 归属 ApiKey（client_api_key.id；匿名/系统为 null）（T-0025） */
+        private Long ownerApiKeyId;
+        /** 归属用户（admin_user.id，可空）（T-0025） */
+        private Long ownerUserId;
 
         SandboxSession(String sessionId, String containerId, String name, Instant lastActivity) {
             this.sessionId = sessionId;
             this.containerId = containerId;
             this.name = name;
+            this.createTime = lastActivity;
             this.lastActivity = lastActivity;
         }
+
+        void setOwnerId(Long clientId, Long apiKeyId, Long userId) {
+            this.ownerClientId = clientId;
+            this.ownerApiKeyId = apiKeyId;
+            this.ownerUserId = userId;
+        }
+    }
+
+    /**
+     * 活跃会话快照 DTO（T-0025，内部接口输出契约，design.md §8.4）。
+     */
+    @Data
+    public static class SessionSnapshot {
+        private String sessionId;
+        private String containerId;
+        private String containerName;
+        private Instant createTime;
+        private Instant lastActiveTime;
+        private Boolean isDefault;
+        private Long ownerClientId;
+        private Long ownerApiKeyId;
+        private Long ownerUserId;
     }
 
     // ==================== Docker exec output callback ====================

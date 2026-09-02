@@ -1,10 +1,10 @@
 # 架构设计文档 — Python Sandbox 管理端
 
 > 文档版本：v1.0（Design 初稿）
-> 输入：`f:/workspaces/python-sandbox/.cospec/admin/requirements.md`（v1.0）
+> 输入：`.cospec/admin/requirements.md`（v1.0，仓库根 `d:/workspaces/j-sandbox`）
 > 输出语言：简体中文
 > 文档定位：面向后续任务拆分（Task agent）与实现阶段（Code agent）的"架构基线"；只描述"模块如何组织、组件如何交互、关键流程如何串通"，不写代码、不写 SQL、不写非功能性指标。
-> 适用项目：在 `f:/workspaces/python-sandbox` 现有仓库下新增 `admin-web`（前端）与 `admin-server`（后端）两个工程，并对既有 `python-sandbox` 做必要的接口/拦截器改造。
+> 适用项目：在当前仓库（`d:/workspaces/j-sandbox`）下新增 `admin-web`（前端）与 `admin-server`（后端）两个工程，并对既有 `python-sandbox` 做必要的接口/拦截器改造。
 
 ---
 
@@ -156,7 +156,7 @@ graph TB
 
 #### 3.1.1 前端工程 `admin-web`
 
-* 路径前缀：`f:/workspaces/python-sandbox/admin-web/`
+* 路径前缀：`admin-web/`（仓库一级目录）
 * 工程脚手架：Vite + Vue3 + TypeScript + Pinia + Vue Router + Axios + Element Plus
 * HTTP 基座：所有请求统一通过 `/admin-api` 前缀转发至 `admin-server`
 * 状态管理：Pinia（用户态、菜单态、权限态、字典态）
@@ -165,7 +165,7 @@ graph TB
 
 #### 3.1.2 管理端后端 `admin-server`
 
-* 路径前缀：`f:/workspaces/python-sandbox/admin-server/`
+* 路径前缀：`admin-server/`（仓库一级目录）
 * 构建：Maven 模块（与 `python-sandbox` 平级，不嵌入其 POM）
 * API 前缀：`/admin-api/**`
 * 端口：与 `python-sandbox` 分离，避免与既有 `/api/sandbox/*` 冲突
@@ -173,7 +173,7 @@ graph TB
 
 #### 3.1.3 既有 `python-sandbox`
 
-* 路径前缀：`f:/workspaces/python-sandbox/python-sandbox/`
+* 路径前缀：`python-sandbox/`（仓库一级目录，既有工程）
 * 接口路径保持 `/api/sandbox/**`，不被管理端占用
 * 本次设计仅在 Filter / Interceptor / Aspect / Entity 四个出口扩展，不修改 Controller 业务方法签名
 
@@ -243,7 +243,7 @@ Service 与 Controller 之间通过 DTO/VO 隔离内部实体，避免持久层�
 | 登录失败计数 | `admin:login-fail:{userId}` | 锁定时长一致 | 网关层 | 网关层 |
 | 账号在线映射（踢下线） | `admin:account-online:{userId}` | 短期 token 同寿命 | 网关层登录成功 | 网关层每次请求 |
 | 短期 token Session | `admin:session:{token}` | 短期 token 同寿命 | Sa-Token | Sa-Token |
-| 长期"记住我"token | `admin:remember:{token}` | 配置项"最长免登天数" | 登录/续登 | 自动续登 |
+| 长期"记住我"token | `admin:remember:token:{token}`（+ 反向索引 `admin:remember:user:{userId}`） | 配置项"最长免登天数" | 登录/续登 | 自动续登 |
 * 不在 Redis 中缓存业务数据（如客户端列表、ApiKey 明细）；避免缓存与 DB 一致性问题。
 * 不在 Redis 中保存 ApiKey 明文；明文只存活于"生成瞬间"的服务端内存中，并在一次性展示响应后立即丢弃。
 
@@ -463,10 +463,10 @@ erDiagram
 
 ### 7.6 灰度开关：匿名调用（默认决策 #10）
 
-* 提供全局开关：`admin.ratelimit.anonymous-allowed`（布尔）。
+* 提供全局开关：`sys_config` 稳定键 `ratelimit.anonymous.allowed`（BOOLEAN，见 seed 001 预置键；python-sandbox 侧经 `SysConfigLite` 只读视图直读）。
 * 默认 `false`：所有 `/api/sandbox/*` 必须携带有效 ApiKey。
 * 当 `true`：在 ApiKey 校验入口允许"匿名调用方"通过校验，但限流仍以"全局默认规则"生效。
-* 切换路径：在管理端的"系统设置"中调整；管理端后端在保存时将该配置同步刷新到本地与 Redis 缓存键 `admin:cfg:anonymous-allowed`。
+* 切换路径：在管理端的"系统设置"页（T-0041）中调整；admin-server 保存后立即刷新 `SysConfigReader` 本地缓存；python-sandbox 侧读取按自身短 TTL 生效。
 
 ---
 
@@ -614,7 +614,7 @@ admin-web/
 ### 9.6 路由守卫与动态路由
 
 * **静态路由**：`/login` / `/403` / `/404` / `/500`。
-* **动态路由**：登录成功后调用 `/admin-api/menu/routes` 获取"当前用户可见菜单树"，递归转换为路由对象并 `router.addRoute`。
+* **动态路由**：登录成功后调用 `/admin-api/menus/routes` 获取"当前用户可见菜单树"，递归转换为路由对象并 `router.addRoute`。
 * **路由守卫**：
   * 未登录访问白名单外页面 → 重定向 `/login`。
   * 已登录访问 `/login` → 重定向首页。
@@ -682,22 +682,22 @@ admin-web/
 
 | 模块 | 路径前缀 | 主要方法 | 作用 |
 |------|----------|----------|------|
-| 认证 | `/admin-api/auth` | `GET /captcha`、`POST /login`、`POST /logout`、`GET /whoami`、`PUT /password` | 登录、登出、修改密码、获取当前账号 |
-| 用户 | `/admin-api/users` | `GET / list`、`POST /`、`PUT /{id}`、`DELETE /{id}`、`PUT /{id}/status`、`PUT /{id}/reset-password`、`PUT /{id}/unlock` | 用户 CRUD、启停、重置、解锁 |
-| 角色 | `/admin-api/roles` | `GET /list`、`POST /`、`PUT /{id}`、`DELETE /{id}`、`GET /{id}/menus`、`PUT /{id}/menus` | 角色 CRUD、分配菜单 |
-| 菜单 | `/admin-api/menus` | `GET /tree`、`POST /`、`PUT /{id}`、`DELETE /{id}`、`GET /routes` | 菜单树管理、动态路由源 |
-| 部门 | `/admin-api/depts`（可选） | `GET /tree`、`POST /`、`PUT /{id}`、`DELETE /{id}` | 部门树 CRUD |
-| 客户端 | `/admin-api/clients` | `GET /list`、`POST /`、`PUT /{id}`、`DELETE /{id}`、`PUT /{id}/status`、`GET /{id}/stats` | 客户端 CRUD、启停、统计 |
-| ApiKey | `/admin-api/apikeys` | `GET /list`、`POST /`、`PUT /{id}/status`、`PUT /{id}/revoke`、`POST /{id}/regenerate` | ApiKey CRUD、状态、撤销、重生 |
-| 限流规则 | `/admin-api/ratelimits` | `GET /list`、`POST /`、`PUT /{id}`、`DELETE /{id}`、`PUT /{id}/status` | 规则 CRUD、启停 |
-| 运行中会话 | `/admin-api/sessions` | `GET /list`、`GET /{sessionId}`、`DELETE /{sessionId}` | 列表、详情、强销 |
-| API 日志 | `/admin-api/logs/api` | `GET /list`、`GET /{id}` | 列表、详情、按 traceId 聚合 |
-| 沙箱操作日志 | `/admin-api/logs/sandbox` | `GET /list`、`GET /{id}` | 列表、详情 |
+| 认证 | `/admin-api/auth` | `GET /captcha`、`POST /login`、`POST /auto-login`、`POST /logout`、`GET /whoami`、`PUT /password`、`GET /token-ttl` | 登录、续登、登出、修改密码、获取当前账号 |
+| 用户 | `/admin-api/users` | `GET /`、`GET /{id}`、`POST /`、`PUT /{id}`、`DELETE /{id}`、`DELETE /batch`、`PUT /{id}/status`、`PUT /{id}/reset-password`、`PUT /{id}/unlock`、`PUT /{id}/roles`、`GET /export`、`POST /import` | 用户 CRUD、批删、启停、重置、解锁、角色绑定、导入导出 |
+| 角色 | `/admin-api/roles` | `GET /list`、`GET /options`、`POST /`、`PUT /{id}`、`DELETE /{id}`、`PUT /{id}/status`、`GET /{id}/menus`、`PUT /{id}/menus` | 角色 CRUD、启停、分配菜单 |
+| 菜单 | `/admin-api/menus` | `GET /tree`、`GET /routes`、`POST /`、`PUT /{id}`、`DELETE /{id}`、`PUT /batch-sort`、`PUT /{id}/visible` | 菜单树管理、动态路由源、排序与显隐 |
+| 部门 | 未实现（本轮退化为 `admin_user.dept_name` 可空文本，见 §14） | — | 不提供部门树 CRUD |
+| 客户端 | `/admin-api/clients` | `GET /`、`GET /{id}`、`POST /`、`PUT /{id}`、`DELETE /{id}`、`PUT /{id}/status`、`GET /{id}/stats`、`PUT /{id}/owner` | 客户端 CRUD、启停、统计、归属转移 |
+| ApiKey | `/admin-api/apikeys` | `GET /`、`GET /{id}`、`POST /`、`PUT /{id}`、`PUT /{id}/status`、`PUT /{id}/revoke`、`POST /{id}/regenerate` | ApiKey CRUD、状态、撤销、重生 |
+| 限流规则 | `/admin-api/ratelimits` | `GET /`、`GET /{id}`、`POST /`、`PUT /{id}`、`DELETE /{id}`、`PUT /{id}/status`、`POST /reload` | 规则 CRUD、启停、手动刷新沙箱规则 |
+| 运行中会话 | `/admin-api/sessions` | `GET /`、`GET /{sessionId}`、`GET /{sessionId}/logs`、`DELETE /{sessionId}`、`GET /batch/preview`、`POST /batch-destroy` | 列表、详情、关联日志、强销、批量清理 |
+| API 日志 | `/admin-api/logs/api` | `GET /`、`GET /{id}`、`GET /export` | 列表、详情、导出（CSV/Excel） |
+| 沙箱操作日志 | `/admin-api/logs/sandbox` | `GET /`、`GET /{id}`、`GET /export` | 列表、详情、导出（CSV/Excel） |
 | 链路详情 | `/admin-api/logs/trace/{traceId}` | `GET /` | 跨表聚合 |
-| 登录日志 | `/admin-api/audit/logins` | `GET /list` | 只读列表 |
-| 操作日志 | `/admin-api/audit/operations` | `GET /list`、`GET /{id}` | 只读列表与详情 |
-| 系统设置 | `/admin-api/sys/configs` | `GET /list`、`PUT /batch` | 配置读写 |
-| 通知公告 | `/admin-api/sys/notices`（可选） | `GET /list`、`POST /`、`PUT /{id}`、`DELETE /{id}` | 公告 CRUD |
+| 登录日志 | `/admin-api/audit` | `GET /logins` | 只读列表 |
+| 操作日志 | `/admin-api/audit` | `GET /operations`、`GET /operations/{id}` | 只读列表与详情 |
+| 系统设置 | `/admin-api/sys/configs` | `GET /`、`PUT /batch` | 配置读写 |
+| 通知公告 | `/admin-api/sys/notices` | `GET /`、`POST /`、`PUT /{id}`、`DELETE /{id}`、`PUT /{id}/publish`、`PUT /{id}/unpublish`；投递 `/notices/inbox`、`/notices/unread-count`、`PUT /notices/{id}/read` | 公告 CRUD 与登录用户投递 |
 
 > 上述为"接口契约清单"，具体请求/响应字段、参数类型、注解样板不在本设计展开。
 
@@ -710,7 +710,7 @@ admin-web/
 | 强销会话 | `/internal/sandbox/sessions/{sessionId}` | `DELETE /` | 强制销毁会话；回执含成功/失败 + 剩余会话数 |
 | 会话详情 | `/internal/sandbox/sessions/{sessionId}/detail` | `GET /` | 关联 ApiKey / 客户端 / 用户上下文 |
 | 限流规则刷新 | `/internal/sandbox/ratelimit/reload` | `POST /` | 触发 `python-sandbox` 立即拉取最新规则（作为"定时拉取"的补充触发器） |
-| 状态查询 | `/internal/sandbox/health` | `GET /` | 内部健康检查 |
+| 状态查询 | `/health`（沿用既有公开健康检查，未纳入 `/internal/**` 通道） | `GET /` | 健康检查（含活跃容器数） |
 
 > 路径空间 `/internal/**` 与公开 `/api/sandbox/**` 互不重叠；鉴权通道独立。
 
@@ -733,7 +733,7 @@ admin-web/
 [5] 后端签发短期 token + 会话；写入 Sa-Token Session 与 account-online:{userId}
 [6] 如勾选"记住我"：额外签发长期 token，写入 HttpOnly Cookie（TTL = 系统设置"最长免登天数"）
 [7] 响应 token；前端持久化短期 token 至 Pinia，长期 token 由 Cookie 自动管理
-[8] 前端拉取菜单（GET /admin-api/menu/routes）+ 权限码集合，构建动态路由
+[8] 前端拉取菜单（GET /admin-api/menus/routes + GET /admin-api/auth/whoami 权限码集合），构建动态路由
 ```
 
 ### 11.2 创建 ApiKey 并下发

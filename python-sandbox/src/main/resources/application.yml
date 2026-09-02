@@ -54,6 +54,17 @@ sandbox:
   docker-tls-verify: ${DOCKER_TLS_VERIFY:false}  # 是否启用 TLS 验证
   docker-api-version: ${DOCKER_API_VERSION:}     # Docker API 版本号，留空使用默认版本
 
+  # 限流规则本地缓存与判定（批次4 T-0024，design.md §7.4）
+  ratelimit:
+    refresh-interval-millis: ${SANDBOX_RATELIMIT_REFRESH_MILLIS:60000}   # 定时拉取 ratelimit_rule 间隔，默认 60s
+    cleanup-interval-millis: ${SANDBOX_RATELIMIT_CLEANUP_MILLIS:600000}  # 计数器清理间隔，默认 10min
+    anonymous-allowed-fallback: ${SANDBOX_RATELIMIT_ANON_FALLBACK:false} # sys_config 缺失 ratelimit.anonymous.allowed 时的回落值（默认严格）
+
+  # 管理端内部接口凭证（批次4 T-0026，design.md §6.3 默认决策 #9）
+  # 独立于客户端 ApiKey；仅 ENV 覆盖，不写入数据库。空值时拒绝一切 /internal/** 调用。
+  internal:
+    token: ${ADMIN_INTERNAL_TOKEN:}
+
   # Python 代码安全校验（runPythonCode 接口）
   python-security:
     enabled: ${SANDBOX_PYTHON_SECURITY_ENABLED:true}               # 是否启用 Python 代码静态安全校验

@@ -1,6 +1,7 @@
 package io.github.sandbox.aspect;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.sandbox.context.AuthContext;
 import io.github.sandbox.entity.ApiLog;
 import io.github.sandbox.service.AsyncLogService;
 import io.github.sandbox.util.TraceUtil;
@@ -67,7 +68,21 @@ public class ApiLogAspect {
             apiLog.setExecutionTime(executionTime);
             apiLog.setClientIp(clientIp);
             apiLog.setCreatedAt(LocalDateTime.now());
-            
+
+            // 归属字段填充（T-0022/T-0023）：从鉴权线程上下文读取；无上下文时保持 NULL
+            AuthContext.Principal principal = AuthContext.getPrincipal();
+            if (principal != null) {
+                apiLog.setClientId(principal.getClientId());
+                apiLog.setApiKeyId(principal.getApiKeyId());
+                apiLog.setOwnerUserId(principal.getOwnerUserId());
+            }
+            // 限流命中标志与规则标识（T-0022，design.md §7.5；命中拒绝路径不进入本切面）
+            AuthContext.RateLimitHit rlHit = AuthContext.getRateLimitHit();
+            apiLog.setRateLimitHit(rlHit != null ? 1 : 0);
+            if (rlHit != null) {
+                apiLog.setRateLimitRuleId(rlHit.getRuleId());
+            }
+
             // 异步记录日志
             asyncLogService.logApiAsync(apiLog);
             

@@ -55,7 +55,7 @@ public enum ErrorCode {
     TOKEN_KICKED_OUT(20004, "账号已在其他设备登录，当前会话已失效"),
     TOKEN_INVALID(20005, "凭证无效"),
 
-    // ===== 3xxxx 客户端 / ApiKey / 限流（批次3/4 使用，此处登记） =====
+    // ===== 3xxxx 客户端 / ApiKey / 限流 =====
     API_KEY_MISSING(30001, "缺少 ApiKey"),
     API_KEY_NOT_FOUND(30002, "ApiKey 不存在"),
     API_KEY_INVALID(30003, "ApiKey 已撤销、过期或未生效"),
@@ -63,13 +63,19 @@ public enum ErrorCode {
     USER_DISABLED(30005, "归属用户已停用"),
     RATE_LIMIT_EXCEEDED(30006, "请求超出限流阈值"),
     CLIENT_CODE_EXISTS(30007, "客户端编码已存在"),
+    CLIENT_HAS_ACTIVE_KEYS(30008, "客户端仍持有有效 ApiKey，禁止删除，请先撤销或处理"),
+    API_KEY_STATE_CONFLICT(30009, "ApiKey 当前状态不允许该操作"),
+    RATELIMIT_RULE_CONFLICT(30010, "相同维度、目标、窗口与阈值的规则已存在"),
+    RATELIMIT_TARGET_INVALID(30011, "限流规则目标不存在或不可见"),
 
-    // ===== 4xxxx 会话（批次4 使用，此处登记） =====
+    // ===== 4xxxx 会话 =====
     SESSION_NOT_FOUND(40001, "会话不存在或已销毁"),
     SESSION_DESTROY_FAILED(40002, "会话强制销毁失败"),
 
     // ===== 5xxxx 系统内部 =====
-    SYSTEM_ERROR(50000, "系统繁忙，请稍后再试");
+    SYSTEM_ERROR(50000, "系统繁忙，请稍后再试"),
+    SANDBOX_BRIDGE_ERROR(50001, "调用沙箱服务内部接口失败"),
+    SANDBOX_BRIDGE_UNAUTHORIZED(50002, "沙箱服务拒绝内部凭证，请检查内部共享密钥配置");
 
     private final int code;
     private final String message;

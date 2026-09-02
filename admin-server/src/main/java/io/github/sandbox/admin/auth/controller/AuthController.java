@@ -9,6 +9,8 @@ import io.github.sandbox.admin.auth.dto.WhoamiVO;
 import io.github.sandbox.admin.auth.service.AuthService;
 import io.github.sandbox.admin.auth.service.CaptchaService;
 import io.github.sandbox.admin.common.result.R;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,17 +39,25 @@ public class AuthController {
     public R<CaptchaVO> captcha() {
         return R.ok(captchaService.generate());
     }
-
-    /** 账号密码 + 验证码登录（免登录）；响应透出首次登录强制改密标记 */
+    /** 账号密码 + 验证码登录（免登录）；响应透出首次登录强制改密标记；勾选记住我下发 HttpOnly Cookie（T-0034） */
     @PostMapping("/login")
-    public R<LoginResultVO> login(@Valid @RequestBody LoginRequest request) {
-        return R.ok(authService.login(request));
+    public R<LoginResultVO> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
+        return R.ok(authService.login(request, response));
     }
 
-    /** 注销 */
+    /**
+     * 自动续登（免登录，T-0034）：前端启动时携带 HttpOnly Cookie 调用，
+     * 长期 token 有效则换取新的短期 token；无效返回 data=null（不报错，前端据此跳登录页）。
+     */
+    @PostMapping("/auto-login")
+    public R<LoginResultVO> autoLogin(HttpServletRequest request, HttpServletResponse response) {
+        return R.ok(authService.autoLogin(request, response));
+    }
+
+    /** 注销（同时作废 Remember-Me 长期 token，T-0034） */
     @PostMapping("/logout")
-    public R<Void> logout() {
-        authService.logout();
+    public R<Void> logout(HttpServletRequest request, HttpServletResponse response) {
+        authService.logout(request, response);
         return R.ok();
     }
 

@@ -69,7 +69,22 @@ public class SandboxOperationLog {
      * 错误信息
      */
     private String errorMessage;
-    
+
+    /**
+     * 归属客户端（client_app.id；无鉴权上下文为NULL）（T-0022）
+     */
+    private Long clientId;
+
+    /**
+     * 归属ApiKey（client_api_key.id）（T-0022）
+     */
+    private Long apiKeyId;
+
+    /**
+     * 归属用户（admin_user.id，数据权限 SELF 过滤键）（T-0022）
+     */
+    private Long ownerUserId;
+
     /**
      * 创建时间
      */

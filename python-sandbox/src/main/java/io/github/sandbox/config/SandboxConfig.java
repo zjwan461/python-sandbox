@@ -13,6 +13,12 @@ import java.util.List;
 public class SandboxConfig {
 
     private String apiKey;
+
+    /**
+     * @deprecated 已被 client_api_key 查表认证取代（T-0023）。仅当 ratelimit.legacy-static-key-enabled=true
+     *             时作为过渡兼容通道保留；默认关闭。
+     */
+    @Deprecated
     private String image = "python:3.12-trixie";
     private String containerNamePrefix = "python-sandbox-";
 
@@ -102,6 +108,38 @@ public class SandboxConfig {
      * 默认拦截：shutil/subprocess/ctypes 等危险模块导入，
      * 以及 os.system、subprocess.run、shutil.rmtree、eval、exec、__import__ 等危险调用。
      */
+    // ==================== 限流与鉴权改造（批次4） ====================
+
+    /** 限流相关配置 */
+    private Ratelimit ratelimit = new Ratelimit();
+
+    /** 内部接口（/internal/**）配置 */
+    private Internal internal = new Internal();
+
+    @Data
+    public static class Ratelimit {
+        /** 定时拉取限流规则间隔（毫秒），默认 60s（design.md §7.4） */
+        private long refreshIntervalMillis = 60000L;
+
+        /** 限流计数器清理间隔（毫秒），默认 10min */
+        private long cleanupIntervalMillis = 600000L;
+
+        /**
+         * sys_config 缺失 ratelimit.anonymous.allowed 键时的本地回落值（默认决策 #10：默认严格 false）。
+         * 正常运行时以数据库 sys_config 为准。
+         */
+        private boolean anonymousAllowedFallback = false;
+    }
+
+    @Data
+    public static class Internal {
+        /**
+         * 管理端内部共享密钥（design.md §6.3 默认决策 #9）。
+         * 经 ENV ADMIN_INTERNAL_TOKEN 覆盖；不写入数据库。空值时拒绝一切内部调用。
+         */
+        private String token = "";
+    }
+
     @Data
     public static class PythonSecurity {
         /** 是否启用 Python 代码安全校验（默认 true） */

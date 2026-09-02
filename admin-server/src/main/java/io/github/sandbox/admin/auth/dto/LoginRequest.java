@@ -26,4 +26,7 @@ public class LoginRequest {
     @NotBlank(message = "验证码不能为空")
     @Size(max = 10, message = "验证码长度非法")
     private String captchaAnswer;
+
+    /** 记住我（T-0034，FR-AUTH-03）：true 时签发长期 token 至 HttpOnly Cookie；默认不签发 */
+    private boolean rememberMe;
 }

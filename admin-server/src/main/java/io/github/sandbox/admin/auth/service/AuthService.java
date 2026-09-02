@@ -16,6 +16,7 @@ import io.github.sandbox.admin.rbac.mapper.AdminUserMapper;
 import io.github.sandbox.admin.rbac.service.AdminPermissionAssembler;
 import io.github.sandbox.admin.sys.service.SysConfigReader;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,12 +28,12 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import java.time.LocalDateTime;
 
 /**
- * 认证闭环服务（T-0015/T-0017，design.md §4.2/§4.3/§11.1）。
+ * 认证闭环服务（T-0015/T-0017/T-0034，design.md §4.2/§4.3/§11.1）。
  *
  * <p>登录流程：验证码一次性校验（错误不消耗账号失败次数）→ 账号状态/锁定检查 →
  * BCrypt 密码校验（失败递增 login_fail_count，达阈值锁定 login.lock.minutes 分钟）→
- * Sa-Token 签发（is-concurrent=false 实现后登踢先登）→ 登录日志落库 →
- * 首次登录强制改密标记透出。</p>
+ * Sa-Token 签发（is-concurrent=false 后登踢先登）→ 登录日志落库 →
+ * 首次登录强制改密标记透出 →（可选）Remember-Me 长期 token 签发（T-0034）。</p>
  */
 @Slf4j
 @Service
@@ -45,10 +46,11 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final SysConfigReader sysConfigReader;
     private final AdminPermissionAssembler permissionAssembler;
+    private final RememberMeService rememberMeService;
 
-    /** 登录（含失败锁定策略与踢下线签发） */
+    /** 登录（含失败锁定策略、踢下线签发与记住我长期 token） */
     @Transactional(rollbackFor = Exception.class)
-    public LoginResultVO login(LoginRequest request) {
+    public LoginResultVO login(LoginRequest request, HttpServletResponse response) {
         // [1] 验证码：一次性消费；错误直接返回 11001，不增加账号失败次数（T-0013 验收）
         captchaService.assertValid(request.getCaptchaId(), request.getCaptchaAnswer());
 
@@ -100,6 +102,15 @@ public class AuthService {
 
         writeLoginLog(user.getUsername(), user.getId(), "SUCCESS", null);
 
+        // [9] 记住我（T-0034）：仅勾选时签发长期 token 至 HttpOnly Cookie；未勾选不签发
+        if (request.isRememberMe()) {
+            rememberMeService.issue(user.getId(), response);
+        } else {
+            // 未勾选时清除可能残留的旧长期 Cookie，避免"上次记住我"泄漏到本次会话
+            rememberMeService.revoke(user.getId());
+            rememberMeService.clearCookie(response);
+        }
+
         LoginResultVO vo = new LoginResultVO();
         vo.setToken(StpUtil.getTokenValue());
         vo.setTokenTimeout(StpUtil.getTokenTimeout());
@@ -109,10 +120,46 @@ public class AuthService {
         return vo;
     }
 
-    /** 注销：清除登录态与账号在线映射 */
-    public void logout() {
+    /**
+     * 自动续登（T-0034，前端启动时调用）：校验 HttpOnly Cookie 中的长期 token，
+     * 有效则重建 Sa-Token 短期会话并滚动刷新长期 token；无效/过期返回 null。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public LoginResultVO autoLogin(HttpServletRequest request, HttpServletResponse response) {
+        Long userId = rememberMeService.verify(request);
+        if (userId == null) {
+            return null;
+        }
+        AdminUser user = adminUserMapper.selectById(userId);
+        if (user == null || user.getStatus() == null || user.getStatus() != 1) {
+            // 账号已删除/停用：长期 token 立即失效
+            rememberMeService.revoke(userId);
+            rememberMeService.clearCookie(response);
+            return null;
+        }
+        StpUtil.login(userId);
+        boolean firstLogin = user.getFirstLogin() != null && user.getFirstLogin() == 1;
+        AdminLoginUser loginUser = permissionAssembler.assemble(
+                userId, user.getUsername(), user.getNickname(), firstLogin);
+        StpUtil.getSession().set(AdminLoginUser.SESSION_KEY, loginUser);
+        rememberMeService.refresh(userId, response); // 滚动续期（新 token 换旧 token）
+        writeLoginLog(user.getUsername(), userId, "SUCCESS", "REMEMBER_ME");
+
+        LoginResultVO vo = new LoginResultVO();
+        vo.setToken(StpUtil.getTokenValue());
+        vo.setTokenTimeout(StpUtil.getTokenTimeout());
+        vo.setFirstLogin(firstLogin);
+        vo.setUserId(userId);
+        vo.setUsername(user.getUsername());
+        return vo;
+    }
+
+    /** 注销：清除登录态、账号在线映射与 Remember-Me 长期 token（T-0034：主动退出后长 token 立即失效） */
+    public void logout(HttpServletRequest request, HttpServletResponse response) {
         Long userId = StpUtil.getLoginIdAsLong();
         StpUtil.logout(userId);
+        rememberMeService.revoke(userId);
+        rememberMeService.clearCookie(response);
     }
 
     /** 当前登录用户信息（用户+角色+权限码集合） */
@@ -144,8 +191,10 @@ public class AuthService {
         update.setFirstLogin(0); // 完成改密即解除首次登录标记
         adminUserMapper.updateById(update);
 
-        // 修改后所有未失效旧会话立即作废（FR-AUTH-05 验收），当前端需重新登录
+        // 修改后所有未失效旧会话立即作废（FR-AUTH-05 验收），当前端需重新登录；
+        // Remember-Me 长期 token 同步失效（T-0034：凭证变更后不得自动续登）
         StpUtil.logout(user.getId());
+        rememberMeService.revoke(user.getId());
     }
 
     // ===================== internal =====================

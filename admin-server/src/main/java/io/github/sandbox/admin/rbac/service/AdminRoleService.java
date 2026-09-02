@@ -7,9 +7,12 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.github.sandbox.admin.common.exception.BusinessException;
 import io.github.sandbox.admin.common.exception.ErrorCode;
 import io.github.sandbox.admin.common.result.PageResult;
+import io.github.sandbox.admin.common.security.DataScopes;
+import io.github.sandbox.admin.rbac.entity.AdminMenu;
 import io.github.sandbox.admin.rbac.entity.AdminRole;
 import io.github.sandbox.admin.rbac.entity.AdminRoleMenu;
 import io.github.sandbox.admin.rbac.entity.AdminUserRole;
+import io.github.sandbox.admin.rbac.mapper.AdminMenuMapper;
 import io.github.sandbox.admin.rbac.mapper.AdminRoleMapper;
 import io.github.sandbox.admin.rbac.mapper.AdminRoleMenuMapper;
 import io.github.sandbox.admin.rbac.mapper.AdminUserMapper;
@@ -20,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * 角色管理服务（T-0019 后端部分）：列表、增改删、启停用、分配菜单权限。
@@ -35,6 +39,7 @@ public class AdminRoleService {
     private final AdminRoleMenuMapper adminRoleMenuMapper;
     private final AdminUserRoleMapper adminUserRoleMapper;
     private final AdminUserMapper adminUserMapper;
+    private final AdminMenuMapper adminMenuMapper;
 
     /** 分页列表 */
     public PageResult<AdminRole> page(String roleName, String roleKey, Integer status, long pageNum, long pageSize) {
@@ -99,13 +104,18 @@ public class AdminRoleService {
         adminRoleMapper.deleteById(id);
     }
 
-    /** 启停用 */
+    /** 启停用（T-0039 增强：内置角色降级保护——超级管理员角色不可停用即"降级为无管理权限"） */
     @Transactional(rollbackFor = Exception.class)
     public void changeStatus(Long id, Integer status) {
         if (status == null || (status != 0 && status != 1)) {
             throw new BusinessException(ErrorCode.PARAM_ERROR, "状态仅支持 0=停用 1=启用");
         }
-        requireRole(id);
+        AdminRole existing = requireRole(id);
+        if (status == 0 && existing.getBuiltIn() != null && existing.getBuiltIn() == 1
+                && DataScopes.ROLE_SUPERADMIN.equals(existing.getRoleKey())) {
+            throw new BusinessException(ErrorCode.BUILT_IN_ROLE_PROTECTED,
+                    "超级管理员角色不可停用（内置角色降级保护，FR-ROLE-04）");
+        }
         AdminRole update = new AdminRole();
         update.setId(id);
         update.setStatus(status);
@@ -113,10 +123,29 @@ public class AdminRoleService {
         refreshSessionSnapshots(id);
     }
 
-    /** 分配菜单权限（全量替换） */
+    /**
+     * 分配菜单权限（全量替换）。
+     *
+     * <p>T-0039 增强：内置超级管理员角色不允许被配置为"无系统管理权限"——
+     * 提交的菜单集合必须仍覆盖全部现有 menu:* 与 user:* 按钮/菜单授权（防止变相降级）。</p>
+     */
     @Transactional(rollbackFor = Exception.class)
     public void assignMenus(Long id, List<Long> menuIds) {
-        requireRole(id);
+        AdminRole role = requireRole(id);
+        if (role.getBuiltIn() != null && role.getBuiltIn() == 1
+                && DataScopes.ROLE_SUPERADMIN.equals(role.getRoleKey())) {
+            List<Long> current = adminRoleMenuMapper.selectMenuIdsByRoleId(id);
+            Set<Long> submitted = new java.util.HashSet<>(menuIds == null ? List.of() : menuIds);
+            for (Long menuId : current) {
+                AdminMenu m = adminMenuMapper.selectById(menuId);
+                if (m != null && m.getPerms() != null
+                        && (m.getPerms().startsWith("menu:") || m.getPerms().startsWith("user:"))
+                        && !submitted.contains(menuId)) {
+                    throw new BusinessException(ErrorCode.BUILT_IN_ROLE_PROTECTED,
+                            "超级管理员角色不能被移除用户/菜单管理权限（内置角色降级保护，FR-ROLE-04）");
+                }
+            }
+        }
         adminRoleMenuMapper.delete(Wrappers.<AdminRoleMenu>lambdaQuery().eq(AdminRoleMenu::getRoleId, id));
         if (menuIds != null) {
             for (Long menuId : menuIds.stream().distinct().toList()) {

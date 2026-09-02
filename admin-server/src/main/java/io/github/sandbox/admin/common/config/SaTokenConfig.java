@@ -23,6 +23,7 @@ public class SaTokenConfig implements WebMvcConfigurer {
     /** 登录白名单（相对 context-path /admin-api） */
     public static final String[] AUTH_WHITELIST = {
             "/auth/login",
+            "/auth/auto-login", // T-0034：Remember-Me 自动续登（凭 HttpOnly Cookie 中长期 token）
             "/auth/captcha",
             "/error"
     };

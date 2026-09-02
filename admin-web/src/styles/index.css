@@ -1,0 +1,90 @@
+/* ============================================================
+ * admin-web 全局样式与视觉规范（T-0011，design.md §9.5）
+ * 主色沿用 Element Plus 默认蓝 #409EFF；卡片 8px 圆角、弱阴影、
+ * 8/12/16/24 间距节奏；正文 14px / 次要 13px / 标题 16-20px。
+ * ============================================================ */
+:root {
+  --app-bg: #f5f7fa;
+  --app-card-radius: 8px;
+  --app-radius-sm: 4px;
+  --app-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  --app-space-1: 8px;
+  --app-space-2: 12px;
+  --app-space-3: 16px;
+  --app-space-4: 24px;
+  --app-sidebar-width: 210px;
+  --app-header-height: 52px;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  font-size: 14px;
+  color: #303133;
+  background: var(--app-bg);
+}
+
+/* 统一卡片：列表页 = 筛选区 + 表格区 + 分页，整页以卡片承载 */
+.app-card {
+  background: #fff;
+  border-radius: var(--app-card-radius);
+  box-shadow: var(--app-shadow);
+  padding: var(--app-space-3);
+  margin-bottom: var(--app-space-3);
+}
+
+.app-page {
+  padding: var(--app-space-3);
+}
+
+/* 表格风格：斑马纹 + 行 hover */
+.app-table .el-table__row:nth-child(even) {
+  background: #fafbfc;
+}
+
+/* 页面标题 */
+.app-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 var(--app-space-3) 0;
+}
+
+/* 搜索区行内表单项间距 */
+.app-search .el-form-item {
+  margin-bottom: var(--app-space-1);
+}
+
+/* 长文本日志展示 */
+.app-log-pre {
+  background: #f6f8fa;
+  border-radius: var(--app-radius-sm);
+  padding: var(--app-space-2);
+  font-family: Consolas, Monaco, 'Courier New', monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 320px;
+  overflow: auto;
+  margin: 4px 0 0 0;
+}
+
+.truncated-tag {
+  margin-left: 6px;
+}
+
+/* 登录页 Blank Layout 样板 */
+.blank-layout {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #eef3fb 0%, #dfe9f5 100%);
+}

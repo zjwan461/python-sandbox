@@ -1,5 +1,6 @@
 package io.github.sandbox.aspect;
 
+import io.github.sandbox.context.AuthContext;
 import io.github.sandbox.entity.SandboxOperationLog;
 import io.github.sandbox.service.AsyncLogService;
 import io.github.sandbox.service.SandboxService.CommandResult;
@@ -134,6 +135,14 @@ public class SandboxOperationLogAspect {
             opLog.setExecutionTime(executionTime);
             opLog.setErrorMessage(errorMessage);
             opLog.setCreatedAt(LocalDateTime.now());
+
+            // 归属字段填充（T-0022/T-0023）：客户端 / ApiKey / 归属用户；无鉴权上下文时保持 NULL
+            AuthContext.Principal principal = AuthContext.getPrincipal();
+            if (principal != null) {
+                opLog.setClientId(principal.getClientId());
+                opLog.setApiKeyId(principal.getApiKeyId());
+                opLog.setOwnerUserId(principal.getOwnerUserId());
+            }
             
             // 如果结果是CommandResult，提取详细信息
             if (commandResult instanceof CommandResult) {

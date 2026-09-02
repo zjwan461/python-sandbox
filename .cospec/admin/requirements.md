@@ -1,7 +1,7 @@
 # 需求规格说明书 — Python Sandbox 管理端
 
 > 文档版本：v1.0
-> 适用项目：`f:/workspaces/python-sandbox`（新增管理端子系统）
+> 适用项目：当前仓库 `d:/workspaces/j-sandbox`（新增管理端子系统 `admin-web`/`admin-server`，改造既有 `python-sandbox`）
 > 输出语言：简体中文
 > 文档定位：面向后续 Design agent 的"待消费"输入；只描述"做什么"，不描述"怎么做"。
 
