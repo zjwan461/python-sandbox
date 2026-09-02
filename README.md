@@ -151,4 +151,4 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 
 ---
 
-© 2024 ITSU Team. All rights reserved.
+© 2026 Python-Sandbox. All rights reserved.
