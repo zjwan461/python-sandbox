@@ -2,6 +2,10 @@
 
 Python Sandbox 的官方客户端 SDK，提供 Java 和 Python 两种语言的封装。
 
+> 提示：`execPython` 在服务端受 **CodeGuard 双策略危险检测**保护（静态校验 + 可选模型推理），
+> 危险代码会收到 HTTP 403 `SECURITY_VIOLATION`，SDK 侧表现为对应异常，请做好错误处理
+> （见 `usage/11_error_handling.py` 示例）。策略说明详见 [AI 危险代码检测](ai-detect.md)。
+
 ## 快速开始
 
 ### Java SDK

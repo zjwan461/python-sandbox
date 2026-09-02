@@ -5,14 +5,17 @@
 ## 功能特性
 
 - **Python代码执行**：在隔离的 Docker 容器中运行 Python 代码
+- **双策略危险代码检测**：执行 Python 前串联静态黑名单校验与 Qwen2.5-Coder 微调模型推理（CodeGuard），策略开关管理端即时可配，详见 [AI 危险代码检测](ai-detect.md)
 - **Shell命令执行**：在沙箱中执行 shell 命令（内置黑名单防护）
 - **pip包管理**：安装、卸载 Python 包
 - **文件操作**：上传、下载、写入沙箱中的文件
-- **API Key认证**：所有接口（除健康检查外）都需要 X-Api-Key 请求头
+- **ApiKey 认证**：基于 client_api_key 表的 SHA-256 摘要校验（X-Api-Key 请求头，除健康检查外全接口生效）
+- **多维限流**：API_KEY / CLIENT / GLOBAL 三维度规则，60s 定时拉取热生效
 - **自动清理**：容器重启后自动清空所有数据和依赖包
 - **会话超时**：可配置的空闲会话自动回收机制
 - **容量限制**：可配置最大活跃容器数及超出策略（拒绝 / 驱逐最旧）
 - **启动预热**：可选择在服务启动时预拉取 Python 镜像，避免首次会话延迟
+- **审计与监控**：traceId 串联 API/沙箱操作日志；Actuator + Prometheus 指标
 
 ## 技术栈
 
@@ -20,28 +23,28 @@
 - Spring Boot 3.2.0
 - Docker Java API (docker-java 3.3.4)
 - python:3.12-trixie (沙箱基础镜像)
-
 ## 快速开始
 
 ### 1. 环境变量配置
 
-复制示例文件并按需修改：
+全栈部署使用**仓库根目录** `.env`（单服务本地开发可参考 `python-sandbox/.env.example`）：
 
 ```bash
 cp .env.example .env
-# 编辑 .env，至少修改 SANDBOX_API_KEY
+# 编辑 .env，至少修改 DB_PASSWORD / ADMIN_INTERNAL_TOKEN
 ```
 
-> `.env.example` 中已包含 `docker-compose.yml` 所有可调参数，开箱即用。
+> 根 `.env.example` 中已包含根 `docker-compose.yml` 所有可调参数，开箱即用。
 
 ### 2. 构建并启动
 
 ```bash
-# 使用 docker-compose 启动
-docker-compose up -d --build
+# 仓库根目录：使用 docker-compose 启动全栈（mysql/redis/sandbox-api/admin-server/admin-web）
+docker compose up -d --build
 
-# 或直接使用 Maven 本地运行
+# 或直接使用 Maven 本地运行沙箱服务（在 python-sandbox 目录）
 mvn spring-boot:run
+```
 ```
 
 ### 3. 验证服务
@@ -56,7 +59,13 @@ curl http://localhost:8080/health
 
 | 环境变量 | application.yml 对应 | 默认值 | 说明 |
 |---|---|---|---|
-| `SANDBOX_API_KEY` | `sandbox.api-key` | `sandbox-secret-key` | API 鉴权密钥 |
+| `ADMIN_INTERNAL_TOKEN` | `sandbox.internal.token` | `change-me-...` | 管理端内部接口（`/internal/**`）共享凭证，与 admin-server 侧一致；不入库，生产必改 |
+| `SANDBOX_RATELIMIT_REFRESH_MILLIS` | `sandbox.ratelimit.refresh-interval-millis` | `60000` | 限流规则 / CodeGuard 策略开关定时拉取间隔 |
+| `SANDBOX_CODEGUARD_DETECT_BASE_URL` | `sandbox.code-guard.detect-base-url` | `http://code-detect:8000` | 模型推理检测服务地址（compose 网络别名） |
+| `SANDBOX_CODEGUARD_DETECT_TIMEOUT_MILLIS` | `sandbox.code-guard.detect-timeout-millis` | `5000` | 推理服务调用超时（毫秒） |
+| `SANDBOX_PYTHON_SECURITY_ENABLED` | `sandbox.python-security.enabled` | `true` | Python 静态校验明细开关（策略总开关见 sys_config） |
+| `SANDBOX_PYTHON_BLOCKED_MODULES` | `sandbox.python-security.extra-blocked-modules` | 留空 | 追加禁用模块（逗号分隔，与默认黑名单合并） |
+| `SANDBOX_API_KEY` | `sandbox.api-key` | `sandbox-secret-key` | 【已废弃】静态密钥占位；认证已改为 client_api_key 表摘要校验 |
 | `SANDBOX_IMAGE` | `sandbox.image` | `python:3.12-trixie` | 沙箱使用的 Python 镜像 |
 | `SANDBOX_CONTAINER_NAME_PREFIX` | `sandbox.container-name-prefix` | `python-sandbox-` | 沙箱容器名称前缀 |
 | `SANDBOX_SESSION_TIMEOUT_MILLIS` | `sandbox.session-timeout-millis` | `86400000` | 会话超时时间（毫秒），默认 24 小时 |
@@ -276,13 +285,18 @@ curl http://localhost:8080/health
 - 服务端日志中的具体错误信息
 
 ## API 文档
-
 ### 认证说明
 
 除了 `/health` 端点外，所有 API 都需要在请求头中包含 `X-Api-Key`：
 
 ```
-X-Api-Key: your-secret-api-key-here
+X-Api-Key: sk_live_xxx
+```
+
+ApiKey 由管理端签发（明文 `sk_live_` + 40 hex，仅创建时一次性展示），库内只存 SHA-256 摘要；
+校验通过后还会依次执行数据权限绑定与三维度限流判定。`/internal/**` 为管理端内部通道，
+使用独立凭证头 `X-Admin-Internal-Token`。详见 [AI 危险代码检测](ai-detect.md) 与
+[调用链路](request-flow.md)。
 ```
 
 ### 1. 健康检查
@@ -342,6 +356,14 @@ Headers: X-Api-Key: your-key
   "stderr": ""
 }
 ```
+
+> ⚠️ 执行前经 **CodeGuard 双策略检测**（静态校验 + 可选模型推理，开关见管理端系统设置）。
+> 命中危险代码返回 HTTP 403：
+> ```json
+> { "error": "SECURITY_VIOLATION", "message": "Calling 'os.remove' is prohibited [VIOLATION: BLOCKED_CALL]" }
+> ```
+> 模型策略命中的 VIOLATION 标记为 `MODEL_DETECTED_DANGEROUS` / `MODEL_DETECTION_UNAVAILABLE`，
+> 详见 [AI 危险代码检测](ai-detect.md)。
 
 ### 5. 执行Shell命令
 
@@ -436,29 +458,35 @@ Headers: X-Api-Key: your-key
 python-sandbox/
 ├── pom.xml
 ├── Dockerfile
-├── docker-compose.yml
-├── .env.example                # 环境变量模板（cp .env.example .env 后修改）
+├── .env.example                # 单服务本地开发环境变量模板（全栈用仓库根 .env）
 └── src/
     └── main/
         ├── java/
-        │   └── com/itsu/sandbox/
+        │   └── io/github/sandbox/
         │       ├── PythonSandboxApplication.java
+        │       ├── aspect/                      # ApiLog / SandboxOperationLog 切面（traceId 审计）
         │       ├── config/
-        │       │   ├── SandboxConfig.java
-        │       │   └── WebConfig.java
+        │       │   ├── AsyncConfig.java / SandboxConfig.java / WebConfig.java
+        │       ├── context/
+        │       │   └── AuthContext.java         # 请求级认证上下文
         │       ├── controller/
-        │       │   ├── SandboxController.java
-        │       │   ├── PythonExecRequest.java
-        │       │   ├── ShellExecRequest.java
-        │       │   ├── PipInstallRequest.java
-        │       │   └── FileWriteRequest.java
+        │       │   ├── SandboxController.java / InternalSandboxController.java / HealthController.java
+        │       │   └── PythonExecRequest.java / ShellExecRequest.java / PipInstallRequest.java / FileWriteRequest.java
+        │       ├── entity/ mapper/              # MyBatis-Plus：ApiKey/限流/日志/sys_config 只读视图
         │       ├── exception/
         │       │   ├── SandboxException.java
         │       │   └── GlobalExceptionHandler.java
+        │       ├── filter/ interceptor/         # TraceFilter / ApiKeyAuthInterceptor / InternalTokenInterceptor
         │       └── service/
-        │           └── SandboxService.java    # @PostConstruct 启动钩子在此
+        │           ├── SandboxService.java      # @PostConstruct 启动钩子；runPythonCode 前调 CodeGuard
+        │           ├── CodeGuardService.java    # 双策略编排（静态+模型），sys_config 开关 60s 拉取
+        │           ├── PythonCodeValidator.java # 策略1：正则三层静态扫描
+        │           ├── ModelCodeDetector.java   # 策略2：HTTP 调用微调模型推理服务（POST /detect）
+        │           ├── RatelimitService.java / ApiKeyAuthService.java / AsyncLogService.java
+        │           └── ShellCommandValidator.java
         └── resources/
-            └── application.yml
+            ├── application.yml
+            └── db/init.sql
 ```
 
 ## Shell 命令黑名单
@@ -483,12 +511,16 @@ python-sandbox/
 
 ## 安全注意事项
 
-1. **API Key 保护**：请妥善保管 `SANDBOX_API_KEY`，不要暴露在公共仓库中
-2. **网络隔离**：建议将沙箱服务部署在内部网络，不要直接暴露到公网
-3. **资源限制**：生产环境建议配置 Docker 容器的 CPU 和内存限制
-4. **额外防护**：如需更严格的控制，可进一步扩展 `ShellCommandValidator` 类中的规则
+## 安全注意事项
 
-## 常见问题
+1. **ApiKey 保护**：ApiKey 明文仅签发时一次性展示，库内只存 SHA-256 摘要；泄露后立即在管理端吊销
+2. **内部凭证**：`ADMIN_INTERNAL_TOKEN` 两侧必须一致且生产必改，留空即拒绝一切 `/internal/**` 调用
+3. **网络隔离**：建议将沙箱服务部署在内部网络，不要直接暴露到公网
+4. **资源限制**：生产环境建议配置 Docker 容器的 CPU 和内存限制（`SANDBOX_CONTAINER_MEMORY_LIMIT`）
+5. **危险检测**：CodeGuard 模型推理策略默认关闭；开启前请确保推理服务可用，并按安全要求设置
+   `codeguard.model.fail-open`（false 时推理服务故障将拒绝执行代码）
+6. **额外防护**：如需更严格的控制，可进一步扩展 `ShellCommandValidator` / `PythonCodeValidator` 规则，
+   或在 sys_config 调整策略开关
 
 ### Q: 容器重启后数据会丢失吗？
 A: 是的，每次重启容器都会清空所有 Python 包和上传的文件。这是设计如此。
@@ -504,6 +536,10 @@ A: 在 `.env` 中设置 `SANDBOX_PULL_IMAGE_ON_STARTUP=true`，重启服务即�
 
 ### Q: 如何连接远程 Docker？
 A: 在 `.env` 中将 `DOCKER_HOST` 设为 `tcp://host:port`，并按需在 `docker-compose.yml` 中移除本地 socket 挂载。
+
+### Q: 如何开启模型推理危险检测？
+A: ① 启用推理服务 profile（如 `COMPOSE_PROFILES=detect-vllm`）；② 管理端「系统设置」打开
+`codeguard.model.enabled`；③ 等待 ≤60s 生效。详见 [AI 危险代码检测](ai-detect.md)。
 
 ## License
 

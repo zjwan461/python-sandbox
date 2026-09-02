@@ -28,6 +28,13 @@
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                    │                                        │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │             CodeGuardService（双策略危险检测编排）                     │   │
+│  │  ├─ 策略1 PythonCodeValidator（静态正则扫描，开关默认开）              │   │
+│  │  └─ 策略2 ModelCodeDetector ──HTTP──▶ 推理服务 :8000 /detect          │   │
+│  │       (Qwen2.5-Coder 微调模型判定，开关默认关，sys_config 即时可配)     │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │                          SandboxService                             │   │
 │  │              (核心业务逻辑，会话管理，Docker 操作封装)                  │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
@@ -54,20 +61,22 @@
 
 ## 应用启动流程
 
-应用启动时，`SandboxService.init()` 方法会执行以下初始化操作：
+应用启动时，核心 Bean 依次完成初始化：
 
 ```
-1. 创建 DockerClient
-   └─> 配置 Docker 连接（host, cert, tls, api-version）
-   └─> 执行 docker ping 验证连接
+1. SandboxService.init()
+   ├─> 创建 DockerClient
+   │   └─> 配置 Docker 连接（host, cert, tls, api-version）
+   │   └─> 执行 docker ping 验证连接
+   ├─> 可选：预拉取镜像（pull-image-on-startup=true 时 docker pull）
+   └─> 可选：创建默认容器（create-default-container-on-startup=true）
 
-2. 可选：预拉取镜像
-   └─> 如果 pull-image-on-startup=true
-   └─> 执行 docker pull 拉取配置的 Python 镜像
+2. RatelimitService.init()
+   └─> 同步拉取限流规则与 sys_config 快照（失败不阻断启动，定时任务兜底）
 
-3. 可选：创建默认容器
-   └─> 如果 create-default-container-on-startup=true
-   └─> 创建名为 "default" 的会话容器
+3. CodeGuardService.init()
+   └─> 同步拉取危险检测策略开关（codeguard.static/model/fail-open，
+       此后每 60s 定时刷新，管理端修改 sys_config 即时生效）
 ```
 
 ## 请求处理链路
@@ -122,7 +131,6 @@ Client
 SandboxController.execPython(request)
   │
   ├─> 从 request 获取 sessionId 和 code
-  │
   ├─> sandboxService.runPythonCode(sessionId, code)
   │   │
   │   ├─> getSession(sessionId)
@@ -132,6 +140,15 @@ SandboxController.execPython(request)
   │   │   │   └─> dockerClient.inspectContainerCmd() 查询容器状态
   │   │   └─> 更新 lastActivity 时间戳
   │   │
+  │   ├─> codeGuardService.guard(code)   【执行前双策略危险检测】
+  │   │   ├─> 策略1 静态校验（sys_config codeguard.static.enabled，默认开）
+  │   │   │   └─> PythonCodeValidator.validate()：长度/预处理/三层扫描
+  │   │   └─> 策略2 模型推理（sys_config codeguard.model.enabled，默认关）
+  │   │       ├─> ModelCodeDetector.isDangerous()：HTTP POST /detect 调推理服务
+  │   │       └─> 服务不可用时按 codeguard.model.fail-open 决定放行/拒绝
+  │   │   （任一策略判定危险 → 抛 SecurityException → 403 SECURITY_VIOLATION）
+  │   │
+  │   ├─> 写入临时 Python 文件
   │   ├─> 写入临时 Python 文件
   │   │   ├─> 生成临时文件路径: /tmp/sandbox_{timestamp}.py
   │   │   └─> 调用 writeFile() 将代码写入容器
@@ -425,7 +442,7 @@ GlobalExceptionHandler
 | FILE_WRITE_ERROR | 文件写入失败 |
 | FILE_READ_ERROR | 文件读取失败 |
 | INTERRUPTED | 命令执行被中断 |
-| SECURITY_VIOLATION | Shell 命令安全验证失败 |
+| SECURITY_VIOLATION | 安全校验失败：Shell 命令黑名单、Python 静态校验（BLOCKED_MODULE/BLOCKED_CALL/BLOCKED_FUNCTION/CODE_TOO_LONG）、CodeGuard 模型推理（MODEL_DETECTED_DANGEROUS/MODEL_DETECTION_UNAVAILABLE） |
 | COMMAND_TOO_LONG | 命令长度超过限制 |
 
 ## 健康检查
@@ -458,3 +475,9 @@ HealthController.health()
 | sandbox.pull-image-on-startup | false | 启动时预拉取镜像 |
 | sandbox.create-default-container-on-startup | true | 启动时创建默认容器 |
 | sandbox.docker-host | unix:///var/run/docker.sock | Docker 连接地址 |
+| sandbox.code-guard.detect-base-url | http://code-detect:8000 | 模型推理检测服务地址 |
+| sandbox.code-guard.detect-timeout-millis | 5000 | 推理服务调用超时 |
+
+> CodeGuard 三个**策略开关**（`codeguard.static.enabled` / `codeguard.model.enabled` /
+> `codeguard.model.fail-open`）不在 application.yml，存于 `sys_config` 表，
+> 管理端「系统设置」页面配置。详见 [AI 危险代码检测](ai-detect.md)。

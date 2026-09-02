@@ -6,5 +6,6 @@ theme:
 nav:
   - 首页: index.md
   - 服务端文档: server.md
+  - AI危险代码检测: ai-detect.md
   - SDK文档: sdk.md
   - 调用链路: request-flow.md
