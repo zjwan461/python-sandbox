@@ -1,0 +1,7 @@
+# vLLM 推理服务依赖
+# 注意: vLLM 官方仅支持 Linux + NVIDIA GPU (CUDA 12.x), Windows 下请通过 WSL2 运行
+# vLLM 会自动拉取适配的 torch / transformers 等依赖, 无需单独固定版本
+vllm==0.11.0
+fastapi==0.121.1
+uvicorn==0.34.0
+python-dotenv==1.2.1
