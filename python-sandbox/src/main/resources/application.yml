@@ -65,13 +65,24 @@ sandbox:
   internal:
     token: ${ADMIN_INTERNAL_TOKEN:change-me-admin-internal-token}
 
-  # Python 代码安全校验（runPythonCode 接口）
+  # Python 代码安全校验（runPythonCode 接口 - 静态校验策略；开关以 sys_config codeguard.static.enabled 为准）
   python-security:
     enabled: ${SANDBOX_PYTHON_SECURITY_ENABLED:true}               # 是否启用 Python 代码静态安全校验
     max-code-length: ${SANDBOX_PYTHON_CODE_MAX_LENGTH:102400}      # Python 代码最大长度（字符数），默认 100KB
     extra-blocked-modules: ${SANDBOX_PYTHON_BLOCKED_MODULES:}      # 追加禁用的模块名（逗号分隔），与默认黑名单合并
     extra-blocked-functions: ${SANDBOX_PYTHON_BLOCKED_FUNCS:}      # 追加禁用的内置函数名（逗号分隔），与默认黑名单合并
     extra-blocked-calls: ${SANDBOX_PYTHON_BLOCKED_CALLS:}          # 追加禁用的方法调用（逗号分隔，格式为 module.func），与默认黑名单合并
+
+  # 代码危险检测策略编排（CodeGuard：静态校验 + 模型推理）
+  # 三个策略开关存于 sys_config（管理端系统设置页面即时可改）：
+  #   codeguard.static.enabled / codeguard.model.enabled / codeguard.model.fail-open
+  # 本节仅提供推理服务地址、超时与 sys_config 缺键时的本地回落值
+  code-guard:
+    detect-base-url: ${SANDBOX_CODEGUARD_DETECT_BASE_URL:http://localhost:8000}      # train/infer 推理服务地址（cpu/cuda/vllm 任一）
+    detect-timeout-millis: ${SANDBOX_CODEGUARD_DETECT_TIMEOUT_MILLIS:5000}           # 推理服务连接/读取超时（毫秒）
+    static-enabled-fallback: ${SANDBOX_CODEGUARD_STATIC_FALLBACK:true}               # sys_config 缺 codeguard.static.enabled 时回落值
+    model-enabled-fallback: ${SANDBOX_CODEGUARD_MODEL_FALLBACK:false}                # sys_config 缺 codeguard.model.enabled 时回落值（默认关闭）
+    model-fail-open-fallback: ${SANDBOX_CODEGUARD_FAIL_OPEN_FALLBACK:true}           # sys_config 缺 codeguard.model.fail-open 时回落值（默认放行）
 
 # Actuator 监控端点配置
 management:

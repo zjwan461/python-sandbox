@@ -1,0 +1,33 @@
+# Code Danger Detect 推理服务 - vLLM 版本 (vLLM 引擎 + GPU 推理)
+# vllm 官方 wheel 仅支持 Linux; 其依赖的 torch 自带 CUDA 运行时,
+# 宿主机需安装 nvidia-container-toolkit, 显存建议 >= 8GB
+# 构建(以本目录为 context):
+#   docker build -f Dockerfile.vllm -t code-detect:vllm .
+# 运行:
+#   docker run -d --gpus all -p 8000:8000 -e BASE_MODEL=zjwan461/jarvis-coder \
+#     -e MAX_MODEL_LEN=1024 -e GPU_MEMORY_UTILIZATION=0.85 \
+#     -v ./hf-cache:/home/app/.cache/huggingface code-detect:vllm
+
+FROM python:3.11-slim
+
+# vllm 运行需要 libgomp(OpenMP)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    HF_HOME=/home/app/.cache/huggingface
+
+RUN useradd -m app && mkdir -p /home/app/.cache/huggingface && chown -R app:app /home/app
+COPY --chown=app:app requirements-vllm.txt .
+RUN pip install --no-cache-dir -r requirements-vllm.txt
+
+COPY --chown=app:app vllm_api_server.py ./
+
+USER app
+EXPOSE 8000
+
+CMD ["python", "vllm_api_server.py"]

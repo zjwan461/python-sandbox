@@ -104,6 +104,13 @@ public class SandboxConfig {
     private PythonSecurity pythonSecurity = new PythonSecurity();
 
     /**
+     * 代码危险检测（CodeGuard）配置。
+     * 策略开关（静态校验/模型推理/失败降级）以数据库 sys_config 为准（管理端可改）；
+     * 本节提供推理服务地址、超时与 sys_config 缺键时的本地回落值。
+     */
+    private CodeGuard codeGuard = new CodeGuard();
+
+    /**
      * Python 代码安全校验的嵌套配置项。
      * 默认拦截：shutil/subprocess/ctypes 等危险模块导入，
      * 以及 os.system、subprocess.run、shutil.rmtree、eval、exec、__import__ 等危险调用。
@@ -156,5 +163,23 @@ public class SandboxConfig {
 
         /** 追加禁用的方法调用，格式为 module.func（与默认黑名单合并） */
         private List<String> extraBlockedCalls = new ArrayList<>();
+    }
+
+    @Data
+    public static class CodeGuard {
+        /** 模型推理检测服务地址（train/infer 的 api_server / vllm_api_server），如 http://code-detect:8000 */
+        private String detectBaseUrl = "http://localhost:8000";
+
+        /** 调用推理服务的连接与读取超时（毫秒），默认 5s */
+        private int detectTimeoutMillis = 5000;
+
+        /** sys_config 缺失 codeguard.static.enabled 键时的本地回落值（默认 true） */
+        private boolean staticEnabledFallback = true;
+
+        /** sys_config 缺失 codeguard.model.enabled 键时的本地回落值（默认 false，需显式开启） */
+        private boolean modelEnabledFallback = false;
+
+        /** sys_config 缺失 codeguard.model.fail-open 键时的本地回落值（默认 true：推理服务不可用时放行） */
+        private boolean modelFailOpenFallback = true;
     }
 }

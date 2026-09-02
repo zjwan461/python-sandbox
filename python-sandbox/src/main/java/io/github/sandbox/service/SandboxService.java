@@ -44,14 +44,14 @@ import java.util.concurrent.TimeUnit;
 public class SandboxService {
 
     private final SandboxConfig config;
-    private final PythonCodeValidator pythonCodeValidator;
+    private final CodeGuardService codeGuardService;
     private final Map<String, SandboxSession> sessions = new ConcurrentHashMap<>();
     private DockerClient dockerClient;
     public static final String DEFAULT_SESSION_ID = "default";
 
-    public SandboxService(SandboxConfig config, PythonCodeValidator pythonCodeValidator) {
+    public SandboxService(SandboxConfig config, CodeGuardService codeGuardService) {
         this.config = config;
-        this.pythonCodeValidator = pythonCodeValidator;
+        this.codeGuardService = codeGuardService;
     }
 
     @PostConstruct
@@ -222,8 +222,9 @@ public class SandboxService {
     public CommandResult runPythonCode(String sessionId, String code) {
         SandboxSession session = getSession(sessionId);
 
-        // 在写入容器前先做静态安全校验，避免危险代码进入沙箱
-        pythonCodeValidator.validate(code);
+        // 在写入容器前先做危险代码检测（策略编排：静态校验 + 模型推理，开关见管理端系统设置），
+        // 避免危险代码进入沙箱
+        codeGuardService.guard(code);
 
         String tmpFile = "/tmp/sandbox_" + System.currentTimeMillis() + ".py";
 

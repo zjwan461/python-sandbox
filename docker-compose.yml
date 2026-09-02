@@ -9,8 +9,12 @@ version: '3.8'
 #   admin-server — 管理端后端（:9090，context-path /admin-api）
 #   admin-web    — 管理端前端（Nginx 静态托管 + /admin-api 反向代理，:80）
 #   prometheus   — 监控（沿用 python-sandbox 既有配置）
+#   detect-cpu   — 代码危险检测推理服务（transformers/CPU，profile: detect-cpu）
+#   detect-cuda  — 代码危险检测推理服务（transformers/CUDA，profile: detect-cuda）
+#   detect-vllm  — 代码危险检测推理服务（vLLM/CUDA，profile: detect-vllm）
 # 数据库初始化：python-sandbox init.sql 先建基础表，cross-cutting schema 001~007 与
 # seed 001~002 按文件名顺序在其后执行（00-init.sql 前缀保证次序）。
+# 推理服务默认不启动，需通过 COMPOSE_PROFILES 或 --profile 显式启用（见根 .env.example）。
 # =====================================================================
 
 services:
@@ -37,9 +41,10 @@ services:
       - ./cross-cutting/database/schema/005-sys-config.sql:/docker-entrypoint-initdb.d/01-005-sys-config.sql:ro
       - ./cross-cutting/database/schema/006-sandbox-log-extension.sql:/docker-entrypoint-initdb.d/01-006-sandbox-log-extension.sql:ro
       - ./cross-cutting/database/schema/007-sys-notice.sql:/docker-entrypoint-initdb.d/01-007-sys-notice.sql:ro
-      # 种子数据（超管 admin/Admin@123、菜单、角色、sys_config；002 为批次6增量权限）
+      # 种子数据（超管 admin/Admin@123、菜单、角色、sys_config；002 为批次6增量权限；003 为 CodeGuard 策略键）
       - ./cross-cutting/database/seed/001-admin-seed.sql:/docker-entrypoint-initdb.d/02-001-admin-seed.sql:ro
       - ./cross-cutting/database/seed/002-admin-batch6.sql:/docker-entrypoint-initdb.d/02-002-admin-batch6.sql:ro
+      - ./cross-cutting/database/seed/003-codeguard.sql:/docker-entrypoint-initdb.d/02-003-codeguard.sql:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
@@ -101,6 +106,9 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-root}
       # ---- 管理端内部接口凭证（T-0026，与 admin-server 必须一致；生产必改） ----
       - ADMIN_INTERNAL_TOKEN=${ADMIN_INTERNAL_TOKEN:-change-me-admin-internal-token}
+      # ---- CodeGuard 模型推理检测（别名 code-detect 指向当前启用的 detect-* 服务） ----
+      - SANDBOX_CODEGUARD_DETECT_BASE_URL=${SANDBOX_CODEGUARD_DETECT_BASE_URL:-http://code-detect:8000}
+      - SANDBOX_CODEGUARD_DETECT_TIMEOUT_MILLIS=${SANDBOX_CODEGUARD_DETECT_TIMEOUT_MILLIS:-5000}
     volumes:
       # 默认挂载本地 Docker socket；使用远程 Docker（DOCKER_HOST=tcp://...）时请注释/删除本行
       - /var/run/docker.sock:/var/run/docker.sock
@@ -163,6 +171,96 @@ services:
       admin-server:
         condition: service_started
 
+  # ---------------------------------------------------------------------
+  # 代码危险检测推理服务（train/infer）—— 三选一，默认均不启动
+  #   profile detect-cpu  : transformers CPU 推理（无需 GPU）
+  #   profile detect-cuda : transformers GPU 推理（需 nvidia-container-toolkit）
+  #   profile detect-vllm : vLLM GPU 推理（需 nvidia-container-toolkit，显存建议 >= 8GB）
+  # 启用方式：在根 .env 中设置 COMPOSE_PROFILES=detect-vllm（见 .env.example），
+  #          或命令行 docker compose --profile detect-cpu up -d
+  # 构建上下文为 train/infer 目录，不受根 .dockerignore 影响。
+  # 模型权重缓存统一挂载到 hf-cache 卷，避免容器重启后重复下载。
+  # ---------------------------------------------------------------------
+
+  # 推理服务 - CPU 版（transformers）
+  detect-cpu:
+    profiles: ["detect-cpu"]
+    build:
+      context: ./train/infer
+      dockerfile: Dockerfile.cpu
+    image: ghcr.io/zjwan461/code-detect:${IMAGE_TAG:-1.0.1}-cpu
+    container_name: code-detect-cpu
+    ports:
+      - "${DETECT_PORT:-8000}:8000"
+    environment:
+      - BASE_MODEL=${BASE_MODEL:-zjwan461/jarvis-coder}
+    volumes:
+      - hf-cache:/home/app/.cache/huggingface
+    restart: unless-stopped
+    # 网络别名：sandbox-api 通过 http://code-detect:8000 访问（三选一启动时别名唯一）
+    networks:
+      default:
+        aliases:
+          - code-detect
+
+  # 推理服务 - CUDA 版（transformers + GPU）
+  detect-cuda:
+    profiles: ["detect-cuda"]
+    build:
+      context: ./train/infer
+      dockerfile: Dockerfile.cuda
+    image: ghcr.io/zjwan461/code-detect:${IMAGE_TAG:-1.0.1}-cuda
+    container_name: code-detect-cuda
+    ports:
+      - "${DETECT_PORT:-8000}:8000"
+    environment:
+      - BASE_MODEL=${BASE_MODEL:-zjwan461/jarvis-coder}
+    volumes:
+      - hf-cache:/home/app/.cache/huggingface
+    restart: unless-stopped
+    # 网络别名：sandbox-api 通过 http://code-detect:8000 访问（三选一启动时别名唯一）
+    networks:
+      default:
+        aliases:
+          - code-detect
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  # 推理服务 - vLLM 版（vLLM 引擎 + GPU）
+  detect-vllm:
+    profiles: ["detect-vllm"]
+    build:
+      context: ./train/infer
+      dockerfile: Dockerfile.vllm
+    image: ghcr.io/zjwan461/code-detect:${IMAGE_TAG:-1.0.1}-vllm
+    container_name: code-detect-vllm
+    ports:
+      - "${DETECT_PORT:-8000}:8000"
+    environment:
+      - BASE_MODEL=${BASE_MODEL:-zjwan461/jarvis-coder}
+      - MAX_MODEL_LEN=${MAX_MODEL_LEN:-1024}
+      - GPU_MEMORY_UTILIZATION=${GPU_MEMORY_UTILIZATION:-0.85}
+    volumes:
+      - hf-cache:/home/app/.cache/huggingface
+    restart: unless-stopped
+    # 网络别名：sandbox-api 通过 http://code-detect:8000 访问（三选一启动时别名唯一）
+    networks:
+      default:
+        aliases:
+          - code-detect
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
   # Prometheus 监控服务
   prometheus:
     image: prom/prometheus:latest
@@ -185,3 +283,5 @@ volumes:
   mysql-data:
   redis-data:
   prometheus-data:
+  # HuggingFace 模型权重缓存（三个推理服务共用，避免重复下载）
+  hf-cache:

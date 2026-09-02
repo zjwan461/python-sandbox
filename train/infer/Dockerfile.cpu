@@ -1,0 +1,26 @@
+# Code Danger Detect 推理服务 - CPU 版本 (transformers 推理)
+# 构建(以本目录为 context):
+#   docker build -f Dockerfile.cpu -t code-detect:cpu .
+# 运行:
+#   docker run -d -p 8000:8000 -e BASE_MODEL=zjwan461/jarvis-coder \
+#     -v ./hf-cache:/home/app/.cache/huggingface code-detect:cpu
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    HF_HOME=/home/app/.cache/huggingface
+
+# 模型权重缓存目录(便于运行时通过 volume 挂载复用)
+RUN useradd -m app && mkdir -p /home/app/.cache/huggingface && chown -R app:app /home/app
+COPY --chown=app:app requirements-cpu.txt .
+RUN pip install --no-cache-dir -r requirements-cpu.txt
+
+COPY --chown=app:app infer_detect.py api_server.py ./
+
+USER app
+EXPOSE 8000
+
+CMD ["python", "api_server.py"]
