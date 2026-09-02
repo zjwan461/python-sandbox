@@ -18,7 +18,7 @@
 
     <groupId>io.github.sandbox.admin</groupId>
     <artifactId>admin-server</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <name>Admin Server</name>
     <description>Python Sandbox Management Console Backend (independent project)</description>
 

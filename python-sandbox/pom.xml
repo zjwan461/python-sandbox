@@ -13,7 +13,7 @@
     
     <groupId>io.github</groupId>
     <artifactId>python-sandbox</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <name>Python Sandbox</name>
     <description>Python Sandbox using Docker containers</description>
     
