@@ -85,6 +85,8 @@ runPythonCode ──guard─┤        开关: codeguard.static.enabled（默认
 ```
 
 - 三个开关存于 `sys_config`，管理端「系统设置」页面即时修改，服务端 60s 定时拉取生效
+- 每次模型推理调用的判定结果（代码原文、label、耗时、处置决策）异步落库
+  `codeguard_detect_log` 表，供调用审计与**再训练数据回流**（数据飞轮）
 - 推理服务三选一（compose profile）：`detect-cpu`（验证用）/ `detect-cuda` / `detect-vllm`（生产推荐）
 - 策略明细见 [`cross-cutting/database/seed/003-codeguard.sql`](cross-cutting/database/seed/003-codeguard.sql)
 
@@ -214,9 +216,10 @@ with SandboxClient("http://localhost:8080", "sk_live_xxx") as client:
  6. cross-cutting/database/schema/005-sys-config.sql            # 系统设置 KV
  7. cross-cutting/database/schema/006-sandbox-log-extension.sql # 日志表扩展（幂等）
  8. cross-cutting/database/schema/007-sys-notice.sql            # 公告通知
- 9. cross-cutting/database/seed/001-admin-seed.sql              # 种子（admin/Admin@123、角色/菜单/设置）
-10. cross-cutting/database/seed/002-admin-batch6.sql            # 批次6 增量权限
-11. cross-cutting/database/seed/003-codeguard.sql               # CodeGuard 策略开关键
+ 9. cross-cutting/database/schema/008-codeguard-detect-log.sql  # 模型推理检测记录表（审计+数据回流）
+10. cross-cutting/database/seed/001-admin-seed.sql              # 种子（admin/Admin@123、角色/菜单/设置）
+11. cross-cutting/database/seed/002-admin-batch6.sql            # 批次6 增量权限
+12. cross-cutting/database/seed/003-codeguard.sql               # CodeGuard 策略开关键
 ```
 
 所有 schema 与 seed 脚本均为幂等设计（`IF NOT EXISTS` / `INSERT IGNORE`），可重复执行。

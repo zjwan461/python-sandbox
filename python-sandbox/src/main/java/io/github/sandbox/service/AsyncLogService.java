@@ -1,8 +1,10 @@
 package io.github.sandbox.service;
 
 import io.github.sandbox.entity.ApiLog;
+import io.github.sandbox.entity.CodeGuardDetectLog;
 import io.github.sandbox.entity.SandboxOperationLog;
 import io.github.sandbox.mapper.ApiLogMapper;
+import io.github.sandbox.mapper.CodeGuardDetectLogMapper;
 import io.github.sandbox.mapper.SandboxOperationLogMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +23,7 @@ public class AsyncLogService {
     
     private final ApiLogMapper apiLogMapper;
     private final SandboxOperationLogMapper sandboxOperationLogMapper;
+    private final CodeGuardDetectLogMapper codeGuardDetectLogMapper;
     
     /**
      * 异步记录API日志
@@ -51,6 +54,24 @@ public class AsyncLogService {
             // 日志记录失败不影响正常功能，仅记录错误日志
             log.error("操作日志记录失败: traceId={}, error={}", 
                     operationLog.getTraceId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 异步记录 CodeGuard 模型推理检测明细（审计 + 再训练数据回流）。
+     *
+     * @param detectLog 检测记录
+     */
+    @Async("logExecutor")
+    public void logCodeGuardDetectAsync(CodeGuardDetectLog detectLog) {
+        try {
+            codeGuardDetectLogMapper.insert(detectLog);
+            log.debug("CodeGuard检测记录成功: traceId={}, label={}, decision={}",
+                    detectLog.getTraceId(), detectLog.getLabel(), detectLog.getDecision());
+        } catch (Exception e) {
+            // 记录失败不影响检测主流程，仅记录错误日志
+            log.error("CodeGuard检测记录失败: traceId={}, error={}",
+                    detectLog.getTraceId(), e.getMessage(), e);
         }
     }
 }

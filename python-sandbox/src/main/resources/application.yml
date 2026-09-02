@@ -80,6 +80,7 @@ sandbox:
   code-guard:
     detect-base-url: ${SANDBOX_CODEGUARD_DETECT_BASE_URL:http://localhost:8000}      # train/infer 推理服务地址（cpu/cuda/vllm 任一）
     detect-timeout-millis: ${SANDBOX_CODEGUARD_DETECT_TIMEOUT_MILLIS:5000}           # 推理服务连接/读取超时（毫秒）
+    model-name: ${SANDBOX_CODEGUARD_MODEL_NAME:zjwan461/jarvis-coder}                # 模型标识（写入 codeguard_detect_log，多模型对比/数据回流溯源）
     static-enabled-fallback: ${SANDBOX_CODEGUARD_STATIC_FALLBACK:true}               # sys_config 缺 codeguard.static.enabled 时回落值
     model-enabled-fallback: ${SANDBOX_CODEGUARD_MODEL_FALLBACK:false}                # sys_config 缺 codeguard.model.enabled 时回落值（默认关闭）
     model-fail-open-fallback: ${SANDBOX_CODEGUARD_FAIL_OPEN_FALLBACK:true}           # sys_config 缺 codeguard.model.fail-open 时回落值（默认放行）

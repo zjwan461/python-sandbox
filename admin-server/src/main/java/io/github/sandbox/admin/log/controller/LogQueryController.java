@@ -7,6 +7,8 @@ import io.github.sandbox.admin.common.result.R;
 import io.github.sandbox.admin.common.util.ExportUtil;
 import io.github.sandbox.admin.log.dto.ApiLogQuery;
 import io.github.sandbox.admin.log.dto.ApiLogVO;
+import io.github.sandbox.admin.log.dto.DetectLogQuery;
+import io.github.sandbox.admin.log.dto.DetectLogVO;
 import io.github.sandbox.admin.log.dto.SandboxLogQuery;
 import io.github.sandbox.admin.log.dto.SandboxLogVO;
 import io.github.sandbox.admin.log.dto.TraceDetailVO;
@@ -84,6 +86,43 @@ public class LogQueryController {
     @GetMapping("/trace/{traceId}")
     public R<TraceDetailVO> traceDetail(@PathVariable String traceId) {
         return R.ok(logQueryService.traceDetail(traceId));
+    }
+
+    // ===================== CodeGuard 模型检测记录 =====================
+
+    /** 模型推理检测记录分页（默认时间倒序） */
+    @SaCheckPermission("apilog:view")
+    @GetMapping("/detect")
+    public R<PageResult<DetectLogVO>> pageDetectLog(DetectLogQuery query) {
+        return R.ok(logQueryService.pageDetectLog(query));
+    }
+
+    /** 模型推理检测记录详情 */
+    @SaCheckPermission("apilog:view")
+    @GetMapping("/detect/{id}")
+    public R<DetectLogVO> detectLogDetail(@PathVariable Long id) {
+        return R.ok(logQueryService.detectLogDetail(id));
+    }
+
+    /** 模型推理检测记录导出（format=csv|excel，口径与其他日志一致） */
+    @SaCheckPermission("apilog:export")
+    @OperationLog(module = "apilog", type = "export")
+    @GetMapping("/detect/export")
+    public ResponseEntity<byte[]> exportDetectLog(DetectLogQuery query,
+                                                  @RequestParam(defaultValue = "csv") String format) {
+        List<DetectLogVO> rows = logQueryService.listDetectLogForExport(query, EXPORT_CAP);
+        List<String> headers = List.of("ID", "traceId", "会话ID", "客户端编码", "ApiKey(掩码)", "归属用户",
+                "模型", "判定标签", "危险", "原始输出", "调用状态", "处置", "耗时(ms)",
+                "代码长度", "错误信息", "代码片段", "时间");
+        List<List<Object>> data = rows.stream().map(v -> List.<Object>of(
+                nz(v.getId()), nz(v.getTraceId()), nz(v.getSessionId()), nz(v.getClientCode()),
+                nz(v.getApiKeyLabel()), nz(v.getOwnerUserName()), nz(v.getModelName()),
+                nz(v.getLabel()), v.getDangerous() == null ? "" : (v.getDangerous() == 1 ? "是" : "否"),
+                nz(v.getRawOutput()), nz(v.getDetectStatus()), nz(v.getDecision()),
+                nz(v.getLatencyMs()), nz(v.getCodeLength()), nz(v.getErrorMessage()),
+                nz(v.getCodeSnippet()),
+                v.getCreatedAt() == null ? "" : CELL_TS.format(v.getCreatedAt()))).toList();
+        return download("codeguard_detect_log", format, headers, data);
     }
 
     // ===================== T-0045 导出 =====================

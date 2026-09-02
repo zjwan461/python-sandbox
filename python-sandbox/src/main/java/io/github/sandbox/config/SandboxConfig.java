@@ -173,6 +173,9 @@ public class SandboxConfig {
         /** 调用推理服务的连接与读取超时（毫秒），默认 5s */
         private int detectTimeoutMillis = 5000;
 
+        /** 推理模型标识（写入 codeguard_detect_log.model_name，便于多模型对比与数据回流溯源） */
+        private String modelName = "zjwan461/jarvis-coder";
+
         /** sys_config 缺失 codeguard.static.enabled 键时的本地回落值（默认 true） */
         private boolean staticEnabledFallback = true;
 

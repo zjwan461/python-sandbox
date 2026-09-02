@@ -222,9 +222,9 @@ public class SandboxService {
     public CommandResult runPythonCode(String sessionId, String code) {
         SandboxSession session = getSession(sessionId);
 
-        // 在写入容器前先做危险代码检测（策略编排：静态校验 + 模型推理，开关见管理端系统设置），
-        // 避免危险代码进入沙箱
-        codeGuardService.guard(code);
+        // 在写入容器前先做危险代码检测（策略编排：静态校验 + 模型推理，开关见管理端系统设置；
+        // 模型检测明细异步落库 codeguard_detect_log），避免危险代码进入沙箱
+        codeGuardService.guard(sessionId, code);
 
         String tmpFile = "/tmp/sandbox_" + System.currentTimeMillis() + ".py";
 

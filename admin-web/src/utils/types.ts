@@ -337,6 +337,29 @@ export interface SandboxLogVO {
   ownerUserName?: string
 }
 
+export interface DetectLogVO {
+  id: number
+  traceId?: string
+  sessionId?: string
+  codeSnippet?: string
+  codeLength?: number
+  modelName?: string
+  label?: string
+  dangerous?: number
+  rawOutput?: string
+  detectStatus?: string
+  decision?: string
+  latencyMs?: number
+  errorMessage?: string
+  createdAt?: string
+  clientId?: number
+  clientCode?: string
+  apiKeyId?: number
+  apiKeyLabel?: string
+  ownerUserId?: number
+  ownerUserName?: string
+}
+
 export interface TraceDetailVO {
   traceId: string
   apiLogs: ApiLogVO[]

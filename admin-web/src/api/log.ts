@@ -1,7 +1,7 @@
 /** 调用记录查询接口（/admin-api/logs/**，权限 apilog:view 只读；apilog:export 导出） */
 import service, { request } from '@/utils/request'
 import { ElMessage } from 'element-plus'
-import type { ApiLogVO, PageResult, SandboxLogVO, TraceDetailVO } from '@/utils/types'
+import type { ApiLogVO, DetectLogVO, PageResult, SandboxLogVO, TraceDetailVO } from '@/utils/types'
 
 export interface ApiLogQuery {
   beginTime?: string
@@ -52,6 +52,33 @@ export function pageSandboxLogs(params: SandboxLogQuery) {
 
 export function getSandboxLog(id: number) {
   return request<SandboxLogVO>({ url: `/logs/sandbox/${id}`, method: 'get' })
+}
+
+// ===================== CodeGuard 模型检测记录 =====================
+
+export interface DetectLogQuery {
+  beginTime?: string
+  endTime?: string
+  label?: string
+  decision?: string
+  detectStatus?: string
+  traceId?: string
+  sessionId?: string
+  clientId?: number
+  apiKeyId?: number
+  ownerUserId?: number
+  orderBy?: string
+  asc?: boolean
+  pageNum?: number
+  pageSize?: number
+}
+
+export function pageDetectLogs(params: DetectLogQuery) {
+  return request<PageResult<DetectLogVO>>({ url: '/logs/detect', method: 'get', params })
+}
+
+export function getDetectLog(id: number) {
+  return request<DetectLogVO>({ url: `/logs/detect/${id}`, method: 'get' })
 }
 
 /** traceId 链路聚合：一次请求的 API 日志 + 多次沙箱操作同屏（FR-LOG-03） */
@@ -107,6 +134,20 @@ export async function exportSandboxLogs(params: SandboxLogQuery, format: 'csv' |
     res.data as Blob,
     res.headers['content-disposition'],
     `sandbox_op_log.${format === 'excel' ? 'xls' : 'csv'}`
+  )
+  ElMessage.success('导出已开始')
+}
+
+/** CodeGuard 模型检测记录导出（口径同上；导出含代码原文，供再训练样本提取） */
+export async function exportDetectLogs(params: DetectLogQuery, format: 'csv' | 'excel'): Promise<void> {
+  const res = await service.get('/logs/detect/export', {
+    params: { ...params, format },
+    responseType: 'blob'
+  })
+  triggerDownload(
+    res.data as Blob,
+    res.headers['content-disposition'],
+    `codeguard_detect_log.${format === 'excel' ? 'xls' : 'csv'}`
   )
   ElMessage.success('导出已开始')
 }

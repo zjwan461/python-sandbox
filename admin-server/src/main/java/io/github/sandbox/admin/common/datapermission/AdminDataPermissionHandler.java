@@ -36,7 +36,8 @@ public class AdminDataPermissionHandler implements MultiDataPermissionHandler {
 
     /** 受 SELF 数据权限管辖的表（小写表名）。批次3 新增归属表在此登记。 */
     private static final List<String> SELF_FILTER_TABLES = List.of(
-            "client_app", "client_api_key", "api_log", "sandbox_operation_log"
+            "client_app", "client_api_key", "api_log", "sandbox_operation_log",
+            "codeguard_detect_log"
     );
 
     @Override
@@ -61,7 +62,7 @@ public class AdminDataPermissionHandler implements MultiDataPermissionHandler {
             case "client_api_key" -> "(" + alias + ".bound_user_id = " + userId
                     + " OR (" + alias + ".bound_user_id IS NULL AND " + alias + ".client_id IN"
                     + " (SELECT id FROM client_app WHERE owner_user_id = " + userId + " AND deleted = 0)))";
-            case "api_log", "sandbox_operation_log" -> alias + ".owner_user_id = " + userId;
+            case "api_log", "sandbox_operation_log", "codeguard_detect_log" -> alias + ".owner_user_id = " + userId;
             default -> null;
         };
         if (condition == null) {

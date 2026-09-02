@@ -14,22 +14,25 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   exportApiLogs,
+  exportDetectLogs,
   exportSandboxLogs,
   getTraceDetail,
   pageApiLogs,
+  pageDetectLogs,
   pageSandboxLogs,
   type ApiLogQuery,
+  type DetectLogQuery,
   type SandboxLogQuery
 } from '@/api/log'
 import { pageClients } from '@/api/client'
 import { pageApiKeys } from '@/api/apikey'
-import type { ApiKeyVO, ApiLogVO, ClientApp, SandboxLogVO, TraceDetailVO } from '@/utils/types'
+import type { ApiKeyVO, ApiLogVO, ClientApp, DetectLogVO, SandboxLogVO, TraceDetailVO } from '@/utils/types'
 import { maskKey } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
 
-const tab = ref<'api' | 'sandbox'>('api')
+const tab = ref<'api' | 'sandbox' | 'detect'>('api')
 const loading = ref(false)
 
 // ===== API 日志 =====
@@ -49,6 +52,15 @@ const sbxQuery = reactive<SandboxLogQuery>({
   clientId: undefined, apiKeyId: undefined, orderBy: 'createdAt', asc: false, pageNum: 1, pageSize: 20
 })
 
+// ===== CodeGuard 模型检测记录 =====
+const detRows = ref<DetectLogVO[]>([])
+const detTotal = ref(0)
+const detQuery = reactive<DetectLogQuery>({
+  beginTime: '', endTime: '', label: '', decision: '', detectStatus: '', traceId: '', sessionId: '',
+  clientId: undefined, apiKeyId: undefined, orderBy: 'createdAt', asc: false, pageNum: 1, pageSize: 20
+})
+const detTimeRange = ref<[string, string] | null>(null)
+
 const timeRange = ref<[string, string] | null>(null)
 const sbxTimeRange = ref<[string, string] | null>(null)
 
@@ -57,8 +69,8 @@ const apiKeyOptions = ref<ApiKeyVO[]>([])
 
 // ===== 详情 / 链路 =====
 const detailVisible = ref(false)
-const detailRow = ref<ApiLogVO | SandboxLogVO | null>(null)
-const detailKind = ref<'api' | 'sandbox'>('api')
+const detailRow = ref<ApiLogVO | SandboxLogVO | DetectLogVO | null>(null)
+const detailKind = ref<'api' | 'sandbox' | 'detect'>('api')
 const traceVisible = ref(false)
 const traceData = ref<TraceDetailVO | null>(null)
 const traceLoading = ref(false)
@@ -92,18 +104,35 @@ async function loadSbx() {
   }
 }
 
+async function loadDet() {
+  loading.value = true
+  try {
+    detQuery.beginTime = detTimeRange.value?.[0] || undefined as any
+    detQuery.endTime = detTimeRange.value?.[1] || undefined as any
+    const page = await pageDetectLogs(detQuery)
+    detRows.value = page.list || []
+    detTotal.value = page.total
+  } finally {
+    loading.value = false
+  }
+}
+
 function search() {
   if (tab.value === 'api') {
     apiQuery.pageNum = 1
     loadApi()
-  } else {
+  } else if (tab.value === 'sandbox') {
     sbxQuery.pageNum = 1
     loadSbx()
+  } else {
+    detQuery.pageNum = 1
+    loadDet()
   }
 }
 
 function onTabChange() {
   if (tab.value === 'sandbox' && !sbxRows.value.length) loadSbx()
+  if (tab.value === 'detect' && !detRows.value.length) loadDet()
 }
 
 function sortApi(prop: string, order: 'ascending' | 'descending' | null) {
@@ -118,6 +147,12 @@ function sortSbx(prop: string, order: 'ascending' | 'descending' | null) {
   sbxQuery.asc = order === 'ascending'
   loadSbx()
 }
+function sortDet(prop: string, order: 'ascending' | 'descending' | null) {
+  if (!order) return
+  detQuery.orderBy = prop
+  detQuery.asc = order === 'ascending'
+  loadDet()
+}
 
 // ===== T-0045 导出（与当前筛选/排序/数据权限一致；apilog:export） =====
 const exporting = ref(false)
@@ -128,9 +163,12 @@ async function doExport(format: 'csv' | 'excel') {
     if (tab.value === 'api') {
       const { pageNum: _p, pageSize: _s, ...filters } = apiQuery
       await exportApiLogs(filters as ApiLogQuery, format)
-    } else {
+    } else if (tab.value === 'sandbox') {
       const { pageNum: _p, pageSize: _s, ...filters } = sbxQuery
       await exportSandboxLogs(filters as SandboxLogQuery, format)
+    } else {
+      const { pageNum: _p, pageSize: _s, ...filters } = detQuery
+      await exportDetectLogs(filters as DetectLogQuery, format)
     }
   } finally {
     exporting.value = false
@@ -147,6 +185,32 @@ function openSbxDetail(row: SandboxLogVO) {
   detailKind.value = 'sandbox'
   detailRow.value = row
   detailVisible.value = true
+}
+
+function openDetDetail(row: DetectLogVO) {
+  detailKind.value = 'detect'
+  detailRow.value = row
+  detailVisible.value = true
+}
+
+/** 处置口径展示映射：ALLOW=放行 BLOCK=拦截 FAIL_OPEN=故障放行 FAIL_CLOSE=故障拒绝 */
+function detDecisionText(decision?: string): string {
+  switch (decision) {
+    case 'ALLOW': return '放行'
+    case 'BLOCK': return '拦截'
+    case 'FAIL_OPEN': return '故障放行'
+    case 'FAIL_CLOSE': return '故障拒绝'
+    default: return decision || '-'
+  }
+}
+
+function detDecisionTag(decision?: string): 'success' | 'danger' | 'warning' | 'info' {
+  switch (decision) {
+    case 'ALLOW': return 'success'
+    case 'BLOCK': return 'danger'
+    case 'FAIL_CLOSE': return 'warning'
+    default: return 'info'
+  }
 }
 
 async function openTrace(traceId?: string) {
@@ -379,6 +443,122 @@ onMounted(async () => {
           @change="loadSbx"
         />
       </el-tab-pane>
+
+      <!-- ================= 模型检测记录（CodeGuard） ================= -->
+      <el-tab-pane label="模型检测记录" name="detect">
+        <el-form inline class="app-search">
+          <el-form-item label="时间">
+            <el-date-picker
+              v-model="detTimeRange"
+              type="datetimerange"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              range-separator="~"
+              start-placeholder="起"
+              end-placeholder="止"
+              style="width: 340px"
+            />
+          </el-form-item>
+          <el-form-item label="判定">
+            <el-select v-model="detQuery.label" placeholder="全部" clearable style="width: 130px">
+              <el-option label="SAFE" value="SAFE" />
+              <el-option label="DANGEROUS" value="DANGEROUS" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="处置">
+            <el-select v-model="detQuery.decision" placeholder="全部" clearable style="width: 130px">
+              <el-option label="ALLOW 放行" value="ALLOW" />
+              <el-option label="BLOCK 拦截" value="BLOCK" />
+              <el-option label="FAIL_OPEN 故障放行" value="FAIL_OPEN" />
+              <el-option label="FAIL_CLOSE 故障拒绝" value="FAIL_CLOSE" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-select v-model="detQuery.detectStatus" placeholder="全部" clearable style="width: 140px">
+              <el-option label="OK 成功" value="OK" />
+              <el-option label="SERVICE_ERROR 服务异常" value="SERVICE_ERROR" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="客户端">
+            <el-select v-model="detQuery.clientId" placeholder="全部" clearable filterable style="width: 170px">
+              <el-option v-for="c in clientOptions" :key="c.id" :label="c.clientCode" :value="c.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="traceId">
+            <el-input v-model="detQuery.traceId" clearable style="width: 200px" @keyup.enter="search" />
+          </el-form-item>
+          <el-form-item label="会话ID">
+            <el-input v-model="detQuery.sessionId" clearable style="width: 170px" />
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" :icon="'Search'" @click="search">查询</el-button>
+            <el-button v-permission="['apilog:export']" :icon="'Download'" :loading="exporting" @click="doExport('csv')">导出CSV</el-button>
+            <el-button v-permission="['apilog:export']" :icon="'Document'" :loading="exporting" @click="doExport('excel')">导出Excel</el-button>
+          </el-form-item>
+        </el-form>
+
+        <el-table
+          v-loading="loading"
+          :data="detRows"
+          stripe border size="small"
+          @sort-change="(p: any) => sortDet(p.prop, p.order)"
+        >
+          <el-table-column prop="createdAt" label="时间" width="160" sortable="custom" />
+          <el-table-column label="判定" width="110">
+            <template #default="{ row }">
+              <el-tag v-if="row.label === 'DANGEROUS'" type="danger" size="small">DANGEROUS</el-tag>
+              <el-tag v-else-if="row.label === 'SAFE'" type="success" size="small">SAFE</el-tag>
+              <el-tag v-else type="info" size="small">无结果</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="处置" width="110">
+            <template #default="{ row }">
+              <el-tag :type="detDecisionTag(row.decision)" size="small">{{ detDecisionText(row.decision) }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="120">
+            <template #default="{ row }">
+              <el-tag :type="row.detectStatus === 'OK' ? 'success' : 'warning'" size="small" :title="row.errorMessage || ''">
+                {{ row.detectStatus === 'OK' ? '成功' : '服务异常' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="codeSnippet" label="送检代码" min-width="240" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span>{{ (row.codeSnippet || '').replace(/\s+/g, ' ').slice(0, 80) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="codeLength" label="长度" width="80" />
+          <el-table-column prop="latencyMs" label="耗时(ms)" width="95" sortable="custom" />
+          <el-table-column prop="modelName" label="模型" width="160" show-overflow-tooltip />
+          <el-table-column label="归属" min-width="160">
+            <template #default="{ row }">
+              <span v-if="row.clientCode">{{ row.clientCode }}</span>
+              <span v-if="row.ownerUserName"> / {{ row.ownerUserName }}</span>
+              <span v-if="!row.clientCode" style="color: #909399">-</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="traceId" label="traceId" min-width="180" show-overflow-tooltip>
+            <template #default="{ row }">
+              <el-link type="primary" @click="openTrace(row.traceId)">{{ row.traceId }}</el-link>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="80" fixed="right">
+            <template #default="{ row }">
+              <el-button link type="primary" size="small" @click="openDetDetail(row)">详情</el-button>
+            </template>
+          </el-table-column>
+          <template #empty><el-empty description="暂无模型检测记录（需开启 codeguard.model.enabled）" /></template>
+        </el-table>
+        <el-pagination
+          v-model:current-page="detQuery.pageNum"
+          v-model:page-size="detQuery.pageSize"
+          :total="detTotal"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next"
+          style="margin-top: 12px; justify-content: flex-end"
+          @change="loadDet"
+        />
+      </el-tab-pane>
     </el-tabs>
 
     <!-- 单条详情 -->
@@ -404,6 +584,35 @@ onMounted(async () => {
             内容已截断（非完整数据）
           </el-tag>
           <pre class="app-log-pre">{{ (detailRow as ApiLogVO).requestParams || '-' }}</pre>
+        </div>
+      </template>
+      <template v-else-if="detailKind === 'detect' && detailRow">
+        <el-descriptions :column="2" border size="small">
+          <el-descriptions-item label="ID">{{ (detailRow as DetectLogVO).id }}</el-descriptions-item>
+          <el-descriptions-item label="时间">{{ (detailRow as DetectLogVO).createdAt }}</el-descriptions-item>
+          <el-descriptions-item label="判定标签">
+            <el-tag :type="(detailRow as DetectLogVO).label === 'DANGEROUS' ? 'danger' : 'success'" size="small">
+              {{ (detailRow as DetectLogVO).label || '无结果' }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="原始输出">{{ (detailRow as DetectLogVO).rawOutput || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="处置">{{ detDecisionText((detailRow as DetectLogVO).decision) }}</el-descriptions-item>
+          <el-descriptions-item label="调用状态">{{ (detailRow as DetectLogVO).detectStatus }}</el-descriptions-item>
+          <el-descriptions-item label="模型">{{ (detailRow as DetectLogVO).modelName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="耗时">{{ (detailRow as DetectLogVO).latencyMs ?? '-' }} ms</el-descriptions-item>
+          <el-descriptions-item label="traceId" :span="2">{{ (detailRow as DetectLogVO).traceId }}</el-descriptions-item>
+          <el-descriptions-item label="会话">{{ (detailRow as DetectLogVO).sessionId || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="代码长度">{{ (detailRow as DetectLogVO).codeLength }}</el-descriptions-item>
+          <el-descriptions-item label="客户端">{{ (detailRow as DetectLogVO).clientCode || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="ApiKey">{{ (detailRow as DetectLogVO).apiKeyLabel || '-' }}</el-descriptions-item>
+        </el-descriptions>
+        <div v-if="(detailRow as DetectLogVO).errorMessage" style="margin-top: 8px">
+          <b>错误信息</b>
+          <pre class="app-log-pre" style="color: #F56C6C">{{ (detailRow as DetectLogVO).errorMessage }}</pre>
+        </div>
+        <div style="margin-top: 8px">
+          <b>送检代码（再训练样本源）</b>
+          <pre class="app-log-pre">{{ (detailRow as DetectLogVO).codeSnippet || '-' }}</pre>
         </div>
       </template>
       <template v-else-if="detailRow">

@@ -33,7 +33,7 @@ services:
       - mysql-data:/var/lib/mysql
       # 基础表（api_log / sandbox_operation_log 等）—— 前缀 00 保证最先执行
       - ./python-sandbox/src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
-      # 管理端 schema（001~007，含幂等扩展脚本 006）
+      # 管理端与检测 schema（001~008，含幂等扩展脚本 006；008 为 CodeGuard 检测记录表）
       - ./cross-cutting/database/schema/001-admin-rbac.sql:/docker-entrypoint-initdb.d/01-001-admin-rbac.sql:ro
       - ./cross-cutting/database/schema/002-client-apikey.sql:/docker-entrypoint-initdb.d/01-002-client-apikey.sql:ro
       - ./cross-cutting/database/schema/003-ratelimit.sql:/docker-entrypoint-initdb.d/01-003-ratelimit.sql:ro
@@ -41,6 +41,7 @@ services:
       - ./cross-cutting/database/schema/005-sys-config.sql:/docker-entrypoint-initdb.d/01-005-sys-config.sql:ro
       - ./cross-cutting/database/schema/006-sandbox-log-extension.sql:/docker-entrypoint-initdb.d/01-006-sandbox-log-extension.sql:ro
       - ./cross-cutting/database/schema/007-sys-notice.sql:/docker-entrypoint-initdb.d/01-007-sys-notice.sql:ro
+      - ./cross-cutting/database/schema/008-codeguard-detect-log.sql:/docker-entrypoint-initdb.d/01-008-codeguard-detect-log.sql:ro
       # 种子数据（超管 admin/Admin@123、菜单、角色、sys_config；002 为批次6增量权限；003 为 CodeGuard 策略键）
       - ./cross-cutting/database/seed/001-admin-seed.sql:/docker-entrypoint-initdb.d/02-001-admin-seed.sql:ro
       - ./cross-cutting/database/seed/002-admin-batch6.sql:/docker-entrypoint-initdb.d/02-002-admin-batch6.sql:ro
@@ -109,6 +110,7 @@ services:
       # ---- CodeGuard 模型推理检测（别名 code-detect 指向当前启用的 detect-* 服务） ----
       - SANDBOX_CODEGUARD_DETECT_BASE_URL=${SANDBOX_CODEGUARD_DETECT_BASE_URL:-http://code-detect:8000}
       - SANDBOX_CODEGUARD_DETECT_TIMEOUT_MILLIS=${SANDBOX_CODEGUARD_DETECT_TIMEOUT_MILLIS:-5000}
+      - SANDBOX_CODEGUARD_MODEL_NAME=${BASE_MODEL:-zjwan461/jarvis-coder}
     volumes:
       # 默认挂载本地 Docker socket；使用远程 Docker（DOCKER_HOST=tcp://...）时请注释/删除本行
       - /var/run/docker.sock:/var/run/docker.sock

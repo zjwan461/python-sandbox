@@ -45,9 +45,29 @@ runPythonCode ──guard─┤        开关: codeguard.static.enabled（默认
 
 - 服务端每 60s 定时拉取（复用 `sandbox.ratelimit.refresh-interval-millis`），
   拉取失败保留旧缓存（fail-open）
+- 每次模型推理调用的结果**异步落库** `codeguard_detect_log` 表（见下节）
 - `sys_config` 缺键时回落到本地配置（`sandbox.code-guard.*-fallback`）
 - 推理服务**地址与超时属基础设施配置**，不入库：`SANDBOX_CODEGUARD_DETECT_BASE_URL`
   （默认 `http://code-detect:8000`）、`SANDBOX_CODEGUARD_DETECT_TIMEOUT_MILLIS`（默认 5000）
+
+## 检测记录落库（codeguard_detect_log）
+
+python-sandbox 每次调用推理服务后，经 `AsyncLogService`（logExecutor 线程池）异步写入
+`codeguard_detect_log` 表一条记录，**记录失败不影响检测与执行主流程**。
+
+| 字段组 | 内容 |
+|--------|------|
+| 关联审计 | `trace_id`（对账 api_log）、`session_id`、`client_id`/`api_key_id`/`owner_user_id`（来自鉴权上下文） |
+| 样本原文 | `code_snippet`（送检代码原文，MEDIUMTEXT）、`code_length` |
+| 模型结果 | `model_name`、`label`（SAFE/DANGEROUS）、`dangerous`、`raw_output`、`latency_ms` |
+| 处置口径 | `detect_status`（OK / SERVICE_ERROR）、`decision`（ALLOW / BLOCK / FAIL_OPEN / FAIL_CLOSE）、`error_message` |
+
+**再训练数据回流**：表按 `(label, create_time)`、`(dangerous, create_time)` 建索引，
+可直接导出线上样本（含 Hard-Negative 疑似误杀场景：label=SAFE 但被拦截或用户申诉），
+转换为 `train/datasets` 的 JSONL 格式重训模型，形成数据飞轮。
+
+> 表 schema：`cross-cutting/database/schema/008-codeguard-detect-log.sql`
+> （compose 初始化自动执行；已有库需手工补跑一次）。
 
 ## 检测模型：Jarvis-Coder
 

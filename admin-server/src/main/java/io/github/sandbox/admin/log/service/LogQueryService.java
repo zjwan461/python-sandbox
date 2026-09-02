@@ -12,12 +12,16 @@ import io.github.sandbox.admin.common.exception.ErrorCode;
 import io.github.sandbox.admin.common.result.PageResult;
 import io.github.sandbox.admin.log.dto.ApiLogQuery;
 import io.github.sandbox.admin.log.dto.ApiLogVO;
+import io.github.sandbox.admin.log.dto.DetectLogQuery;
+import io.github.sandbox.admin.log.dto.DetectLogVO;
 import io.github.sandbox.admin.log.dto.SandboxLogQuery;
 import io.github.sandbox.admin.log.dto.SandboxLogVO;
 import io.github.sandbox.admin.log.dto.TraceDetailVO;
 import io.github.sandbox.admin.log.entity.ApiLogView;
+import io.github.sandbox.admin.log.entity.CodeGuardDetectLogView;
 import io.github.sandbox.admin.log.entity.SandboxOperationLogView;
 import io.github.sandbox.admin.log.mapper.ApiLogViewMapper;
+import io.github.sandbox.admin.log.mapper.CodeGuardDetectLogViewMapper;
 import io.github.sandbox.admin.log.mapper.SandboxOperationLogViewMapper;
 import io.github.sandbox.admin.rbac.entity.AdminUser;
 import io.github.sandbox.admin.rbac.mapper.AdminUserMapper;
@@ -51,6 +55,7 @@ public class LogQueryService {
 
     private final ApiLogViewMapper apiLogMapper;
     private final SandboxOperationLogViewMapper sandboxLogMapper;
+    private final CodeGuardDetectLogViewMapper detectLogMapper;
     private final ClientAppMapper clientAppMapper;
     private final ClientApiKeyMapper apiKeyMapper;
     private final AdminUserMapper adminUserMapper;
@@ -133,6 +138,109 @@ public class LogQueryService {
                 .eq(query.getClientId() != null, SandboxOperationLogView::getClientId, query.getClientId())
                 .eq(query.getApiKeyId() != null, SandboxOperationLogView::getApiKeyId, query.getApiKeyId())
                 .eq(query.getOwnerUserId() != null, SandboxOperationLogView::getOwnerUserId, query.getOwnerUserId());
+    }
+
+    // ===================== CodeGuard 检测记录 =====================
+
+    /** 检测记录分页（默认时间倒序；数据权限由 SELF 行过滤保证） */
+    public PageResult<DetectLogVO> pageDetectLog(DetectLogQuery query) {
+        LambdaQueryWrapper<CodeGuardDetectLogView> wrapper = buildDetectWrapper(query);
+        applyDetectOrder(wrapper, query);
+        Page<CodeGuardDetectLogView> page = detectLogMapper.selectPage(
+                new Page<>(Math.max(1, query.getPageNum()), clampSize(query.getPageSize())), wrapper);
+        Map<Long, ClientApp> clientMap = loadClients(page.getRecords().stream()
+                .map(CodeGuardDetectLogView::getClientId).collect(Collectors.toList()));
+        Map<Long, ClientApiKey> keyMap = loadKeys(page.getRecords().stream()
+                .map(CodeGuardDetectLogView::getApiKeyId).collect(Collectors.toList()));
+        Map<Long, AdminUser> userMap = loadUsers(page.getRecords().stream()
+                .map(CodeGuardDetectLogView::getOwnerUserId).collect(Collectors.toList()));
+        List<DetectLogVO> vos = page.getRecords().stream()
+                .map(row -> toDetectVO(row, clientMap, keyMap, userMap)).toList();
+        return new PageResult<>(vos, page.getTotal(), page.getCurrent(), page.getSize());
+    }
+
+    /** 检测记录详情（经数据权限行过滤；越权=不存在） */
+    public DetectLogVO detectLogDetail(Long id) {
+        CodeGuardDetectLogView row = detectLogMapper.selectById(id);
+        if (row == null) {
+            throw new BusinessException(ErrorCode.DATA_NOT_FOUND, "检测记录不存在或无权访问");
+        }
+        return toDetectVO(row, loadClients(List.of(row.getClientId())),
+                loadKeys(List.of(row.getApiKeyId())), loadUsers(List.of(row.getOwnerUserId())));
+    }
+
+    /** 检测记录导出查询（与分页同一筛选/排序/数据权限口径，上限 cap 条） */
+    public List<DetectLogVO> listDetectLogForExport(DetectLogQuery query, int cap) {
+        LambdaQueryWrapper<CodeGuardDetectLogView> wrapper = buildDetectWrapper(query);
+        applyDetectOrder(wrapper, query);
+        wrapper.last("LIMIT " + Math.min(Math.max(1, cap), 50000));
+        List<CodeGuardDetectLogView> rows = detectLogMapper.selectList(wrapper);
+        Map<Long, ClientApp> clientMap = loadClients(rows.stream()
+                .map(CodeGuardDetectLogView::getClientId).collect(Collectors.toList()));
+        Map<Long, ClientApiKey> keyMap = loadKeys(rows.stream()
+                .map(CodeGuardDetectLogView::getApiKeyId).collect(Collectors.toList()));
+        Map<Long, AdminUser> userMap = loadUsers(rows.stream()
+                .map(CodeGuardDetectLogView::getOwnerUserId).collect(Collectors.toList()));
+        return rows.stream().map(r -> toDetectVO(r, clientMap, keyMap, userMap)).toList();
+    }
+
+    private LambdaQueryWrapper<CodeGuardDetectLogView> buildDetectWrapper(DetectLogQuery query) {
+        return Wrappers.<CodeGuardDetectLogView>lambdaQuery()
+                .ge(query.getBeginTime() != null, CodeGuardDetectLogView::getCreatedAt, query.getBeginTime())
+                .le(query.getEndTime() != null, CodeGuardDetectLogView::getCreatedAt, query.getEndTime())
+                .eq(StringUtils.hasText(query.getLabel()), CodeGuardDetectLogView::getLabel, query.getLabel())
+                .eq(StringUtils.hasText(query.getDecision()), CodeGuardDetectLogView::getDecision, query.getDecision())
+                .eq(StringUtils.hasText(query.getDetectStatus()), CodeGuardDetectLogView::getDetectStatus, query.getDetectStatus())
+                .eq(StringUtils.hasText(query.getTraceId()), CodeGuardDetectLogView::getTraceId, query.getTraceId())
+                .eq(StringUtils.hasText(query.getSessionId()), CodeGuardDetectLogView::getSessionId, query.getSessionId())
+                .eq(query.getClientId() != null, CodeGuardDetectLogView::getClientId, query.getClientId())
+                .eq(query.getApiKeyId() != null, CodeGuardDetectLogView::getApiKeyId, query.getApiKeyId())
+                .eq(query.getOwnerUserId() != null, CodeGuardDetectLogView::getOwnerUserId, query.getOwnerUserId());
+    }
+
+    private void applyDetectOrder(LambdaQueryWrapper<CodeGuardDetectLogView> wrapper, DetectLogQuery query) {
+        boolean asc = Boolean.TRUE.equals(query.getAsc());
+        String orderBy = query.getOrderBy() == null ? "createdAt" : query.getOrderBy();
+        switch (orderBy) {
+            case "id" -> wrapper.orderBy(true, asc, CodeGuardDetectLogView::getId);
+            case "latencyMs" -> wrapper.orderBy(true, asc, CodeGuardDetectLogView::getLatencyMs);
+            default -> wrapper.orderBy(true, asc, CodeGuardDetectLogView::getCreatedAt);
+        }
+    }
+
+    private DetectLogVO toDetectVO(CodeGuardDetectLogView row, Map<Long, ClientApp> clientMap,
+                                   Map<Long, ClientApiKey> keyMap, Map<Long, AdminUser> userMap) {
+        DetectLogVO vo = new DetectLogVO();
+        vo.setId(row.getId());
+        vo.setTraceId(row.getTraceId());
+        vo.setSessionId(row.getSessionId());
+        vo.setCodeSnippet(row.getCodeSnippet());
+        vo.setCodeLength(row.getCodeLength());
+        vo.setModelName(row.getModelName());
+        vo.setLabel(row.getLabel());
+        vo.setDangerous(row.getDangerous());
+        vo.setRawOutput(row.getRawOutput());
+        vo.setDetectStatus(row.getDetectStatus());
+        vo.setDecision(row.getDecision());
+        vo.setLatencyMs(row.getLatencyMs());
+        vo.setErrorMessage(row.getErrorMessage());
+        vo.setCreatedAt(row.getCreatedAt());
+        vo.setClientId(row.getClientId());
+        ClientApp client = row.getClientId() == null ? null : clientMap.get(row.getClientId());
+        if (client != null) {
+            vo.setClientCode(client.getClientCode());
+        }
+        vo.setApiKeyId(row.getApiKeyId());
+        ClientApiKey key = row.getApiKeyId() == null ? null : keyMap.get(row.getApiKeyId());
+        if (key != null) {
+            vo.setApiKeyLabel(key.getName() + "（" + key.getKeyPrefix() + "…" + key.getKeySuffixMask() + "）");
+        }
+        vo.setOwnerUserId(row.getOwnerUserId());
+        AdminUser user = row.getOwnerUserId() == null ? null : userMap.get(row.getOwnerUserId());
+        if (user != null) {
+            vo.setOwnerUserName(user.getUsername());
+        }
+        return vo;
     }
 
     /** API 日志详情（经数据权限行过滤；越权=不存在） */

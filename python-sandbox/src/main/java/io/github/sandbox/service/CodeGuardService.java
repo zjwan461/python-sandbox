@@ -2,8 +2,11 @@ package io.github.sandbox.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.github.sandbox.config.SandboxConfig;
+import io.github.sandbox.context.AuthContext;
+import io.github.sandbox.entity.CodeGuardDetectLog;
 import io.github.sandbox.entity.SysConfigLite;
 import io.github.sandbox.mapper.SysConfigLiteMapper;
+import io.github.sandbox.util.TraceUtil;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +57,7 @@ public class CodeGuardService {
     private final ModelCodeDetector modelCodeDetector;
     private final SysConfigLiteMapper sysConfigLiteMapper;
     private final SandboxConfig sandboxConfig;
+    private final AsyncLogService asyncLogService;
 
     /** sys_config 策略开关快照 */
     private final AtomicReference<Map<String, String>> sysConfigCache = new AtomicReference<>(Map.of());
@@ -102,11 +106,14 @@ public class CodeGuardService {
 
     /**
      * 执行前检测入口：按当前策略开关依次执行静态校验与模型推理。
+     * 模型推理的判定结果（含服务故障场景）异步写入 codeguard_detect_log，
+     * 供调用审计与再训练数据回流。
      *
-     * @param code 待执行的 Python 源码
+     * @param sessionId 沙箱会话ID（可为 null，仅用于检测记录关联）
+     * @param code      待执行的 Python 源码
      * @throws SecurityException 任一策略判定危险（或模型策略 fail-close 且服务不可用）
      */
-    public void guard(String code) {
+    public void guard(String sessionId, String code) {
         if (code == null || code.trim().isEmpty()) {
             return;
         }
@@ -116,18 +123,22 @@ public class CodeGuardService {
             pythonCodeValidator.validate(code);
         }
 
-        // 策略2：模型推理检测
+        // 策略2：模型推理检测（结果无论成败均落库）
         if (isModelEnabled()) {
             try {
-                boolean dangerous = modelCodeDetector.isDangerous(code);
-                if (dangerous) {
+                ModelCodeDetector.DetectionResult result = modelCodeDetector.detect(code);
+                recordModelDetection(sessionId, code, result,
+                        result.isDangerous() ? "BLOCK" : "ALLOW", null);
+                if (result.isDangerous()) {
                     log.warn("Blocked by model detection: code judged DANGEROUS");
                     throw new SecurityException(
                             "Code classified as dangerous by AI model"
                                     + " [VIOLATION: MODEL_DETECTED_DANGEROUS]");
                 }
             } catch (ModelCodeDetector.DetectionUnavailableException e) {
-                if (isModelFailOpen()) {
+                boolean failOpen = isModelFailOpen();
+                recordModelDetectionFailure(sessionId, code, e, failOpen);
+                if (failOpen) {
                     log.warn("Model detection service unavailable, fail-open (allow): {}", e.getMessage());
                 } else {
                     log.error("Model detection service unavailable, fail-close (reject): {}", e.getMessage());
@@ -137,6 +148,65 @@ public class CodeGuardService {
                 }
             }
         }
+    }
+
+    /** 组装模型检测成功记录并异步落库 */
+    private void recordModelDetection(String sessionId, String code,
+                                      ModelCodeDetector.DetectionResult result,
+                                      String decision, String errorMessage) {
+        try {
+            CodeGuardDetectLog record = baseRecord(sessionId, code);
+            record.setLabel(truncate(result.getLabel(), 16));
+            record.setRawOutput(truncate(result.getRawOutput(), 255));
+            record.setDangerous(result.isDangerous() ? 1 : 0);
+            record.setDetectStatus("OK");
+            record.setDecision(decision);
+            record.setLatencyMs(result.getLatencyMs());
+            record.setErrorMessage(truncate(errorMessage, 512));
+            asyncLogService.logCodeGuardDetectAsync(record);
+        } catch (Exception e) {
+            // 记录组装失败绝不影响检测主流程
+            log.warn("组装 CodeGuard 检测记录失败: {}", e.getMessage());
+        }
+    }
+
+    /** 组装模型检测故障记录并异步落库（label/dangerous 为 NULL，记录降级处置） */
+    private void recordModelDetectionFailure(String sessionId, String code,
+                                             ModelCodeDetector.DetectionUnavailableException e,
+                                             boolean failOpen) {
+        try {
+            CodeGuardDetectLog record = baseRecord(sessionId, code);
+            record.setDetectStatus("SERVICE_ERROR");
+            record.setDecision(failOpen ? "FAIL_OPEN" : "FAIL_CLOSE");
+            record.setErrorMessage(truncate(e.getMessage(), 512));
+            asyncLogService.logCodeGuardDetectAsync(record);
+        } catch (Exception ex) {
+            log.warn("组装 CodeGuard 故障检测记录失败: {}", ex.getMessage());
+        }
+    }
+
+    /** 公共字段：traceId / 鉴权上下文 / 代码原文 / 模型标识 */
+    private CodeGuardDetectLog baseRecord(String sessionId, String code) {
+        CodeGuardDetectLog record = new CodeGuardDetectLog();
+        record.setTraceId(TraceUtil.getTraceId());
+        record.setSessionId(sessionId);
+        AuthContext.Principal principal = AuthContext.getPrincipal();
+        if (principal != null) {
+            record.setClientId(principal.getClientId());
+            record.setApiKeyId(principal.getApiKeyId());
+            record.setOwnerUserId(principal.getOwnerUserId());
+        }
+        record.setCodeSnippet(code);
+        record.setCodeLength(code.length());
+        record.setModelName(sandboxConfig.getCodeGuard().getModelName());
+        return record;
+    }
+
+    private static String truncate(String value, int maxLen) {
+        if (value == null) {
+            return null;
+        }
+        return value.length() <= maxLen ? value : value.substring(0, maxLen);
     }
 
     private boolean isStaticEnabled() {
