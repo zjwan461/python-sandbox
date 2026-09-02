@@ -27,6 +27,7 @@
         <mybatis-plus.version>3.5.5</mybatis-plus.version>
         <sa-token.version>1.37.0</sa-token.version>
         <easy-captcha.version>1.6.2</easy-captcha.version>
+        <nashorn.version>15.4</nashorn.version>
         <mysql.version>8.2.0</mysql.version>
         <spring-security-crypto.version>6.2.0</spring-security-crypto.version>
     </properties>
@@ -90,6 +91,14 @@
             <groupId>com.github.whvcse</groupId>
             <artifactId>easy-captcha</artifactId>
             <version>${easy-captcha.version}</version>
+        </dependency>
+
+        <!-- Nashorn 独立版：easy-captcha 的 ArithmeticCaptcha 依赖 JS ScriptEngine 计算算术表达式，
+             而 Nashorn 自 JDK 15 起已从 JDK 移除（本工程运行于 JDK 17），缺失会导致 engine 为 null 的 NPE -->
+        <dependency>
+            <groupId>org.openjdk.nashorn</groupId>
+            <artifactId>nashorn-core</artifactId>
+            <version>${nashorn.version}</version>
         </dependency>
 
         <!-- BCrypt 密码哈希：仅引 crypto 工具包，不引入 spring-boot-starter-security（任务硬约束） -->

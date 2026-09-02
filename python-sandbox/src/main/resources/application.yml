@@ -63,7 +63,7 @@ sandbox:
   # 管理端内部接口凭证（批次4 T-0026，design.md §6.3 默认决策 #9）
   # 独立于客户端 ApiKey；仅 ENV 覆盖，不写入数据库。空值时拒绝一切 /internal/** 调用。
   internal:
-    token: ${ADMIN_INTERNAL_TOKEN:}
+    token: ${ADMIN_INTERNAL_TOKEN:change-me-admin-internal-token}
 
   # Python 代码安全校验（runPythonCode 接口）
   python-security:

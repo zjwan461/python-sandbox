@@ -88,6 +88,19 @@ export function layoutRoute(children: RouteRecordRaw[]): RouteRecordRaw {
         component: () => import('@/views/dashboard/index.vue'),
         meta: { title: '工作台', icon: 'HomeFilled' }
       },
+      // 个人中心/修改密码：非菜单页但需保留 DefaultLayout（左侧菜单+顶栏），挂在 Layout 下
+      {
+        path: 'profile',
+        name: 'Profile',
+        component: () => import('@/views/auth/profile.vue'),
+        meta: { title: '个人中心' }
+      },
+      {
+        path: 'change-password',
+        name: 'ChangePassword',
+        component: () => import('@/views/auth/change-password.vue'),
+        meta: { title: '修改密码' }
+      },
       ...children
     ]
   }

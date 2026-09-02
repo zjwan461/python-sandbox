@@ -13,6 +13,7 @@ import { markNoticeRead, noticeInbox, noticeUnreadCount } from '@/api/sys'
 import type { SysNoticeVO } from '@/utils/types'
 import { useUserStore } from '@/stores/user'
 import { usePermissionStore } from '@/stores/permission'
+import { resetDynamicRoutes } from '@/router'
 import SideMenu from './components/SideMenu.vue'
 
 const route = useRoute()
@@ -67,6 +68,8 @@ async function handleCommand(cmd: string) {
     await ElMessageBox.confirm('确定退出登录吗？', '提示', { type: 'warning' })
     await userStore.logout()
     permStore.resetRoutes()
+    // 同步移除已注册动态路由并重置初始化缓存，保证重新登录后路由重建
+    resetDynamicRoutes()
     router.replace('/login')
   } else if (cmd === 'profile') {
     router.push('/profile')
@@ -141,11 +144,14 @@ async function handleCommand(cmd: string) {
         <el-icon class="banner-close" @click="bannerDismissed = true"><Close /></el-icon>
       </div>
       <el-main style="padding: 0; background: var(--app-bg)">
+        <!-- keep-alive 与普通渲染必须整棵子树互斥（v-if/v-else），
+             同一 Component vnode 不能同时出现在 keep-alive 内外两个分支，
+             否则切换时 keep-alive 对已被接管的实例 deactivate → parentComponent.ctx.deactivate 报错 -->
         <router-view v-slot="{ Component }">
-          <keep-alive>
-            <component :is="Component" v-if="route.meta?.keepAlive !== false" />
+          <keep-alive v-if="route.meta?.keepAlive !== false">
+            <component :is="Component" :key="route.path" />
           </keep-alive>
-          <component :is="Component" v-if="route.meta?.keepAlive === false" />
+          <component :is="Component" v-else :key="route.path" />
         </router-view>
       </el-main>
     </el-container>

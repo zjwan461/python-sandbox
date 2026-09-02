@@ -19,18 +19,6 @@ const staticRoutes: RouteRecordRaw[] = [
     meta: { public: true, title: '登录' }
   },
   {
-    path: '/change-password',
-    name: 'ChangePassword',
-    component: () => import('@/views/auth/change-password.vue'),
-    meta: { title: '修改密码' }
-  },
-  {
-    path: '/profile',
-    name: 'Profile',
-    component: () => import('@/views/auth/profile.vue'),
-    meta: { title: '个人中心' }
-  },
-  {
     path: '/403',
     name: 'Forbidden',
     component: () => import('@/views/error/403.vue'),
@@ -49,23 +37,49 @@ const router = createRouter({
   routes: staticRoutes
 })
 
-let initializing = false
+let initPromise: Promise<void> | null = null
 
-async function setupDynamicRoutes(): Promise<void> {
+/** 注册动态路由 + 404 兜底（main.ts 挂载前预加载与守卫共用，幂等） */
+export async function setupDynamicRoutes(): Promise<void> {
   const userStore = useUserStore()
   const permStore = usePermissionStore()
   if (!userStore.userInfo) {
     await userStore.fetchWhoami()
   }
   const routes = await permStore.generateRoutes()
+  // 重复注册保护：先移除旧的 LayoutRoot，避免并发/重放产生重名路由
+  if (router.hasRoute(LAYOUT_ROUTE_NAME)) {
+    router.removeRoute(LAYOUT_ROUTE_NAME)
+  }
   router.addRoute(layoutRoute(routes))
   // 404 兜底在动态路由注册后追加，避免刷新误跳
-  router.addRoute({
-    path: '/:pathMatch(.*)*',
-    name: 'CatchAll',
-    redirect: '/404',
-    meta: { public: true }
-  })
+  if (!router.hasRoute('CatchAll')) {
+    router.addRoute({
+      path: '/:pathMatch(.*)*',
+      name: 'CatchAll',
+      redirect: '/404',
+      meta: { public: true }
+    })
+  }
+}
+
+/** 并发安全的初始化入口：多导航共享同一 Promise，完成后统一重放 */
+function ensureDynamicRoutes(): Promise<void> {
+  if (!initPromise) {
+    initPromise = setupDynamicRoutes().catch((err) => {
+      initPromise = null
+      throw err
+    })
+  }
+  return initPromise
+}
+
+/** 登出/认证失效统一清理：重置初始化缓存并移除已注册动态路由，避免重新登录时路由不重建 */
+export function resetDynamicRoutes(): void {
+  initPromise = null
+  if (router.hasRoute(LAYOUT_ROUTE_NAME)) {
+    router.removeRoute(LAYOUT_ROUTE_NAME)
+  }
 }
 
 router.beforeEach(async (to) => {
@@ -88,23 +102,17 @@ router.beforeEach(async (to) => {
   }
 
   if (!permStore.routesLoaded) {
-    if (initializing) {
-      // 并发导航等待首个初始化完成后重放
-      return false as any
-    }
-    initializing = true
     try {
-      await setupDynamicRoutes()
+      await ensureDynamicRoutes()
     } catch {
-      initializing = false
       userStore.reset()
       permStore.resetRoutes()
       return { path: '/login' }
     }
-    initializing = false
     if (userStore.firstLogin && to.name !== 'ChangePassword') {
       return { path: '/change-password', query: { forced: '1' }, replace: true }
     }
+    // 动态路由注册完成后重放当前导航，使其命中新注册的子路由
     return { ...to, replace: true }
   }
 
@@ -122,10 +130,8 @@ registerAuthExpiredHandler(() => {
   const permStore = usePermissionStore()
   userStore.reset()
   permStore.resetRoutes()
-  // 移除已注册动态路由，避免残留在路由表
-  if (router.hasRoute(LAYOUT_ROUTE_NAME)) {
-    router.removeRoute(LAYOUT_ROUTE_NAME)
-  }
+  // 重置初始化缓存并移除已注册动态路由，避免残留/重新登录时不重建
+  resetDynamicRoutes()
   const current = router.currentRoute.value
   router.replace({
     path: '/login',
