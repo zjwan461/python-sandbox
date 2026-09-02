@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Maven 构建用 settings.xml：把仓库地址切到阿里云镜像，国内构建可显著加速。
-  仅供 Docker 构建阶段使用，不影响本机开发（如本机也需要，可复制到 ~/.m2/settings.xml）。
+  Maven 构建用 settings.xml（根目录公用）：把仓库地址切到阿里云镜像，国内构建可显著加速。
+  供 python-sandbox 与 admin-server 的 Docker 构建阶段共用（compose 以仓库根为 build context）。
+  不影响本机开发（如本机也需要，可复制到 ~/.m2/settings.xml）。
   用法：
       mvn -s maven-settings.xml <command>
 -->

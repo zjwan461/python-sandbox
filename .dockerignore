@@ -1,0 +1,8 @@
+# 根 build context（python-sandbox / admin-server 镜像共用仓库根为 context）
+# 仅两个 Java 工程与根 maven-settings.xml 需要进入构建上下文，其余全部排除以加速构建。
+*
+!maven-settings.xml
+!python-sandbox/pom.xml
+!python-sandbox/src
+!admin-server/pom.xml
+!admin-server/src

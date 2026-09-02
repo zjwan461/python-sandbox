@@ -1,0 +1,187 @@
+version: '3.8'
+
+# =====================================================================
+# j-sandbox 全栈编排（根目录统一入口）
+# 服务清单：
+#   mysql        — 共用数据库 sandbox（python-sandbox 与 admin-server 共库不同表）
+#   redis        — admin-server 会话/验证码/Remember-Me 存储（python-sandbox 暂不使用）
+#   sandbox-api  — Python 沙箱执行服务（:8080，/api/sandbox/** + /internal/**）
+#   admin-server — 管理端后端（:9090，context-path /admin-api）
+#   admin-web    — 管理端前端（Nginx 静态托管 + /admin-api 反向代理，:80）
+#   prometheus   — 监控（沿用 python-sandbox 既有配置）
+# 数据库初始化：python-sandbox init.sql 先建基础表，cross-cutting schema 001~007 与
+# seed 001~002 按文件名顺序在其后执行（00-init.sql 前缀保证次序）。
+# =====================================================================
+
+services:
+  # MySQL 数据库服务
+  mysql:
+    image: mysql:8.0
+    container_name: python-sandbox-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD:-root}
+      - MYSQL_DATABASE=sandbox
+      - MYSQL_CHARACTER_SET_SERVER=utf8mb4
+      - MYSQL_COLLATION_SERVER=utf8mb4_unicode_ci
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # 基础表（api_log / sandbox_operation_log 等）—— 前缀 00 保证最先执行
+      - ./python-sandbox/src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
+      # 管理端 schema（001~007，含幂等扩展脚本 006）
+      - ./cross-cutting/database/schema/001-admin-rbac.sql:/docker-entrypoint-initdb.d/01-001-admin-rbac.sql:ro
+      - ./cross-cutting/database/schema/002-client-apikey.sql:/docker-entrypoint-initdb.d/01-002-client-apikey.sql:ro
+      - ./cross-cutting/database/schema/003-ratelimit.sql:/docker-entrypoint-initdb.d/01-003-ratelimit.sql:ro
+      - ./cross-cutting/database/schema/004-admin-audit.sql:/docker-entrypoint-initdb.d/01-004-admin-audit.sql:ro
+      - ./cross-cutting/database/schema/005-sys-config.sql:/docker-entrypoint-initdb.d/01-005-sys-config.sql:ro
+      - ./cross-cutting/database/schema/006-sandbox-log-extension.sql:/docker-entrypoint-initdb.d/01-006-sandbox-log-extension.sql:ro
+      - ./cross-cutting/database/schema/007-sys-notice.sql:/docker-entrypoint-initdb.d/01-007-sys-notice.sql:ro
+      # 种子数据（超管 admin/Admin@123、菜单、角色、sys_config；002 为批次6增量权限）
+      - ./cross-cutting/database/seed/001-admin-seed.sql:/docker-entrypoint-initdb.d/02-001-admin-seed.sql:ro
+      - ./cross-cutting/database/seed/002-admin-batch6.sql:/docker-entrypoint-initdb.d/02-002-admin-batch6.sql:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Redis（admin-server：Sa-Token 会话 / 验证码 / 登录失败计数 / Remember-Me）
+  redis:
+    image: redis:7-alpine
+    container_name: admin-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Python Sandbox API 服务
+  # build context 为仓库根目录，供两个 Java 工程共用根目录 maven-settings.xml（阿里云镜像加速）
+  sandbox-api:
+    build:
+      context: .
+      dockerfile: python-sandbox/Dockerfile
+    image: ghcr.io/zjwan461/python-sandbox:${IMAGE_TAG:-1.0.1}
+    container_name: python-sandbox-api
+    ports:
+      - "8080:8080"
+    environment:
+      - SANDBOX_API_KEY=${SANDBOX_API_KEY:-sandbox-secret-key}
+      - SANDBOX_IMAGE=${SANDBOX_IMAGE:-python:3.12-trixie}
+      - SANDBOX_CONTAINER_NAME_PREFIX=${SANDBOX_CONTAINER_NAME_PREFIX:-python-sandbox-}
+      - SANDBOX_SESSION_TIMEOUT_MILLIS=${SANDBOX_SESSION_TIMEOUT_MILLIS:-86400000}
+      - SANDBOX_SESSION_CLEANUP_INTERVAL_MILLIS=${SANDBOX_SESSION_CLEANUP_INTERVAL_MILLIS:-3600000}
+      - SANDBOX_MAX_CONTAINERS=${SANDBOX_MAX_CONTAINERS:-10}
+      - SANDBOX_MAX_CONTAINERS_BEHAVIOR=${SANDBOX_MAX_CONTAINERS_BEHAVIOR:-reject}
+      - SANDBOX_PULL_IMAGE_ON_STARTUP=${SANDBOX_PULL_IMAGE_ON_STARTUP:-false}
+      - SANDBOX_CREATE_DEFAULT_CONTAINER_ON_STARTUP=${SANDBOX_CREATE_DEFAULT_CONTAINER_ON_STARTUP:-true}
+      # 单个容器的内存限制（字节），默认 512MB
+      - SANDBOX_CONTAINER_MEMORY_LIMIT=${SANDBOX_CONTAINER_MEMORY_LIMIT:-536870912}
+      # 本地 Docker 默认 unix socket；远程 Docker 时可在 .env 中覆盖为 tcp://host:2375
+      - DOCKER_HOST=${DOCKER_HOST:-unix:///var/run/docker.sock}
+      # ---- Python 代码安全校验（作用于 /exec/python 接口） ----
+      - SANDBOX_PYTHON_SECURITY_ENABLED=${SANDBOX_PYTHON_SECURITY_ENABLED:-true}
+      - SANDBOX_PYTHON_CODE_MAX_LENGTH=${SANDBOX_PYTHON_CODE_MAX_LENGTH:-102400}
+      - SANDBOX_PYTHON_BLOCKED_MODULES=${SANDBOX_PYTHON_BLOCKED_MODULES:-}
+      - SANDBOX_PYTHON_BLOCKED_FUNCS=${SANDBOX_PYTHON_BLOCKED_FUNCS:-}
+      - SANDBOX_PYTHON_BLOCKED_CALLS=${SANDBOX_PYTHON_BLOCKED_CALLS:-}
+      # ---- 数据库配置 ----
+      - DB_URL=jdbc:mysql://mysql:3306/sandbox?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+      - DB_USERNAME=${DB_USERNAME:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-root}
+      # ---- 管理端内部接口凭证（T-0026，与 admin-server 必须一致；生产必改） ----
+      - ADMIN_INTERNAL_TOKEN=${ADMIN_INTERNAL_TOKEN:-change-me-admin-internal-token}
+    volumes:
+      # 默认挂载本地 Docker socket；使用远程 Docker（DOCKER_HOST=tcp://...）时请注释/删除本行
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Admin Server（管理端后端，context-path /admin-api，端口 9090）
+  admin-server:
+    build:
+      context: .
+      dockerfile: admin-server/Dockerfile
+    image: ghcr.io/zjwan461/sandbox-admin-server:${IMAGE_TAG:-1.0.1}
+    container_name: admin-server
+    ports:
+      - "9090:9090"
+    environment:
+      - DB_URL=jdbc:mysql://mysql:3306/sandbox?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+      - DB_USERNAME=${DB_USERNAME:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-root}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      # Bridge 对接 python-sandbox（compose 内服务名寻址）
+      - SANDBOX_BASE_URL=http://sandbox-api:8080
+      # 内部共享凭证，必须与 sandbox-api 侧一致（生产必改）
+      - ADMIN_INTERNAL_TOKEN=${ADMIN_INTERNAL_TOKEN:-change-me-admin-internal-token}
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      sandbox-api:
+        condition: service_started
+    healthcheck:
+      # 未登录时 whoami 返回 401/401 语义，只要 HTTP 有响应即视为存活
+      test: ["CMD-SHELL", "curl -s -o /dev/null http://localhost:9090/admin-api/auth/whoami || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # Admin Web（管理端前端，Nginx 静态托管 + /admin-api 反代）
+  admin-web:
+    build: ./admin-web
+    image: ghcr.io/zjwan461/sandbox-admin-web:${IMAGE_TAG:-1.0.1}
+    container_name: admin-web
+    ports:
+      - "${ADMIN_WEB_PORT:-80}:80"
+    restart: unless-stopped
+    depends_on:
+      admin-server:
+        condition: service_started
+
+  # Prometheus 监控服务
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: python-sandbox-prometheus
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./python-sandbox/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    restart: unless-stopped
+    depends_on:
+      - sandbox-api
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+
+volumes:
+  mysql-data:
+  redis-data:
+  prometheus-data:
