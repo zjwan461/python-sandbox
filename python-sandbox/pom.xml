@@ -101,6 +101,13 @@
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-ai</artifactId>
+            <version>5.8.46</version>
+        </dependency>
+
         
         <dependency>
             <groupId>org.springframework.boot</groupId>

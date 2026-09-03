@@ -7,25 +7,32 @@ import cn.dev33.satoken.exception.NotRoleException;
 import io.github.sandbox.admin.common.result.R;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
-import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.stream.Collectors;
 
 /**
  * 全局异常处理器（T-0016，design.md §4.6）。
  *
- * <p>HTTP 状态与业务码解耦：统一返回 HTTP 200 + 业务语义 code，
- * 由前端 Axios 拦截器按 code 分发（401/403 语义由 code 2xxxx 表达）。</p>
+ * <p>
+ * HTTP 状态与业务码解耦：统一返回 HTTP 200 + 业务语义 code，
+ * 由前端 Axios 拦截器按 code 分发（401/403 语义由 code 2xxxx 表达）。
+ * </p>
  *
- * <p>认证授权语义互不混淆：
- * 未登录 / 无权限 / 角色不足 / 账号停用 / 被踢下线 分别映射 20001 / 20002 / 20003 / 11004 / 20004。</p>
+ * <p>
+ * 认证授权语义互不混淆：
+ * 未登录 / 无权限 / 角色不足 / 账号停用 / 被踢下线 分别映射 20001 / 20002 / 20003 / 11004 / 20004。
+ * </p>
  */
 @Slf4j
 @RestControllerAdvice
@@ -34,7 +41,8 @@ public class GlobalExceptionHandler {
     /** 业务异常：透出自定义 code 与安全 message，不暴露内部对象 */
     @ExceptionHandler(BusinessException.class)
     public R<Void> handleBusiness(BusinessException e, HttpServletRequest request) {
-        log.warn("业务异常 [{}] {} -> code={}, msg={}", request.getMethod(), request.getRequestURI(), e.getCode(), e.getMessage());
+        log.warn("业务异常 [{}] {} -> code={}, msg={}", request.getMethod(), request.getRequestURI(), e.getCode(),
+                e.getMessage());
         return R.fail(e.getCode(), e.getMessage());
     }
 
@@ -102,6 +110,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public R<Void> handleNotReadable(HttpMessageNotReadableException e) {
         return R.fail(ErrorCode.PARAM_ERROR, "请求体格式错误");
+    }
+
+    /** 404 */
+    @ExceptionHandler(NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public R<Void> handleNotReadable(NoResourceFoundException e) {
+        return R.fail(ErrorCode.SYSTEM_ERROR, e.getMessage());
     }
 
     /** 兜底：不暴露堆栈 */

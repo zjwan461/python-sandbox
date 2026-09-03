@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -93,6 +94,15 @@ public class GlobalExceptionHandler {
     public Map<String, Object> handleIllegalArgumentException(IllegalArgumentException e) {
         Map<String, Object> response = new HashMap<>();
         response.put("error", "INVALID_PARAMETER");
+        response.put("message", e.getMessage());
+        return response;
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public Map<String, Object> handle404(NoResourceFoundException e) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("error", "NOT_FOUND");
         response.put("message", e.getMessage());
         return response;
     }
