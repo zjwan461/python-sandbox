@@ -23,7 +23,7 @@ WORKDIR /app
 # 安装 curl 供容器 healthcheck 使用
 RUN apk add --no-cache curl
 
-COPY --from=build /app/target/admin-server-1.0.0.jar app.jar
+COPY --from=build /app/target/admin-server-1.0.1.jar app.jar
 
 EXPOSE 9090
 

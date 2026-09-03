@@ -23,7 +23,7 @@ WORKDIR /app
 # 安装 docker CLI（如挂载了 /var/run/docker.sock 则需要此 CLI 来操作宿主机容器）
 RUN apk add --no-cache docker-cli
 
-COPY --from=build /app/target/python-sandbox-1.0.0.jar app.jar
+COPY --from=build /app/target/python-sandbox-1.0.1.jar app.jar
 
 EXPOSE 8080
 
