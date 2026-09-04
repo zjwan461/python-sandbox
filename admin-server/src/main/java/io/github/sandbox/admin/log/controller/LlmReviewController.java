@@ -21,6 +21,7 @@ import java.io.PrintWriter;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 大模型复检任务管理接口。
@@ -56,6 +57,14 @@ public class LlmReviewController {
     @PostMapping
     public R<Long> createReviewTask(@RequestParam Long detectLogId) {
         return R.ok(llmReviewService.createReviewTask(detectLogId));
+    }
+
+    /** 批量创建复检任务 */
+    @SaCheckPermission("llmreview:edit")
+    @OperationLog(module = "llmreview", type = "batchCreate")
+    @PostMapping("/batch")
+    public R<Map<String, Object>> batchCreateReviewTask(@RequestBody List<Long> detectLogIds) {
+        return R.ok(llmReviewService.batchCreateReviewTask(detectLogIds));
     }
 
     /** 人工复核 */

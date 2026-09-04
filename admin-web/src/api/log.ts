@@ -179,6 +179,14 @@ export function createLlmReview(detectLogId: number) {
   return request<number>({ url: '/logs/llm-review', method: 'post', params: { detectLogId } })
 }
 
+export function batchCreateLlmReview(detectLogIds: number[]) {
+  return request<{ success: number; skipped: number; failed: number; total: number; errors: string[] }>({
+    url: '/logs/llm-review/batch',
+    method: 'post',
+    data: detectLogIds
+  })
+}
+
 export function humanReviewLlm(id: number, data: { humanReviewStatus: string; humanLabel?: string; humanRemark?: string }) {
   return request<void>({ url: `/logs/llm-review/${id}/review`, method: 'put', data })
 }

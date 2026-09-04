@@ -89,6 +89,60 @@ public class LlmReviewService {
     }
 
     /**
+     * 批量创建复检任务。
+     *
+     * @param detectLogIds 检测记录 ID 列表
+     * @return 包含成功/失败/跳过数量的统计
+     */
+    @Transactional
+    public Map<String, Object> batchCreateReviewTask(List<Long> detectLogIds) {
+        int success = 0;
+        int skipped = 0;
+        int failed = 0;
+        List<String> errors = new java.util.ArrayList<>();
+
+        for (Long detectLogId : detectLogIds) {
+            try {
+                LambdaQueryWrapper<LlmReviewTask> wrapper = Wrappers.<LlmReviewTask>lambdaQuery()
+                        .eq(LlmReviewTask::getDetectLogId, detectLogId);
+                LlmReviewTask existing = llmReviewTaskMapper.selectOne(wrapper);
+                if (existing != null) {
+                    skipped++;
+                    continue;
+                }
+                CodeGuardDetectLogView detectLog = detectLogMapper.selectById(detectLogId);
+                if (detectLog == null) {
+                    failed++;
+                    errors.add("检测记录不存在: " + detectLogId);
+                    continue;
+                }
+                LlmReviewTask task = new LlmReviewTask();
+                task.setDetectLogId(detectLogId);
+                task.setTaskStatus("PENDING");
+                task.setRetryCount(0);
+                task.setMaxRetry(3);
+                task.setCreatedAt(LocalDateTime.now());
+                task.setUpdatedAt(LocalDateTime.now());
+                llmReviewTaskMapper.insert(task);
+                success++;
+            } catch (Exception e) {
+                failed++;
+                errors.add("ID=" + detectLogId + ": " + e.getMessage());
+            }
+        }
+
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("success", success);
+        result.put("skipped", skipped);
+        result.put("failed", failed);
+        result.put("total", detectLogIds.size());
+        result.put("errors", errors);
+        log.info("批量创建复检任务完成: total={}, success={}, skipped={}, failed={}",
+                detectLogIds.size(), success, skipped, failed);
+        return result;
+    }
+
+    /**
      * 异步执行复检任务。
      *
      * @param taskId 任务 ID

@@ -12,8 +12,9 @@
  */
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
+  batchCreateLlmReview,
   createLlmReview,
   exportApiLogs,
   exportDetectLogs,
@@ -62,6 +63,10 @@ const detQuery = reactive<DetectLogQuery>({
   clientId: undefined, apiKeyId: undefined, orderBy: 'createdAt', asc: false, pageNum: 1, pageSize: 20
 })
 const detTimeRange = ref<[string, string] | null>(null)
+
+// 批量复检
+const detSelectedRows = ref<DetectLogVO[]>([])
+const batchReviewLoading = ref(false)
 
 const timeRange = ref<[string, string] | null>(null)
 const sbxTimeRange = ref<[string, string] | null>(null)
@@ -206,6 +211,37 @@ async function startLlmReview(row: DetectLogVO) {
     ElMessage.success('复检任务已创建，请前往"大模型复检"页面查看')
   } catch {
     // 业务错误已由 request 拦截器自动弹出，此处不再重复提示
+  }
+}
+
+/** 批量发起大模型复检 */
+async function batchStartLlmReview() {
+  if (detSelectedRows.value.length === 0) {
+    ElMessage.warning('请先选择要复检的记录')
+    return
+  }
+  
+  try {
+    await ElMessageBox.confirm(
+      `确定要为选中的 ${detSelectedRows.value.length} 条记录批量发起复检吗？`,
+      '批量复检确认',
+      { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
+    )
+  } catch {
+    return
+  }
+  
+  batchReviewLoading.value = true
+  try {
+    const ids = detSelectedRows.value.map(row => row.id!).filter(Boolean)
+    const result = await batchCreateLlmReview(ids)
+    ElMessage.success(`批量复检完成：成功 ${result.success} 条，跳过 ${result.skipped} 条，失败 ${result.failed} 条`)
+    detSelectedRows.value = []
+    loadDet()
+  } catch {
+    // 业务错误已由 request 拦截器自动弹出
+  } finally {
+    batchReviewLoading.value = false
   }
 }
 
@@ -509,6 +545,9 @@ onMounted(async () => {
             <el-button type="primary" :icon="'Search'" @click="search">查询</el-button>
             <el-button v-permission="['apilog:export']" :icon="'Download'" :loading="exporting" @click="doExport('csv')">导出CSV</el-button>
             <el-button v-permission="['apilog:export']" :icon="'Document'" :loading="exporting" @click="doExport('excel')">导出Excel</el-button>
+            <el-button v-permission="['llmreview:edit']" type="success" :icon="'Promotion'" :loading="batchReviewLoading" :disabled="detSelectedRows.length === 0" @click="batchStartLlmReview">
+              批量发起复检{{ detSelectedRows.length > 0 ? ` (${detSelectedRows.length})` : '' }}
+            </el-button>
           </el-form-item>
         </el-form>
 
@@ -517,7 +556,9 @@ onMounted(async () => {
           :data="detRows"
           stripe border size="small"
           @sort-change="(p: any) => sortDet(p.prop, p.order)"
+          @selection-change="(rows: DetectLogVO[]) => detSelectedRows = rows"
         >
+          <el-table-column type="selection" width="45" />
           <el-table-column prop="createdAt" label="时间" width="160" sortable="custom" />
           <el-table-column label="判定" width="110">
             <template #default="{ row }">
