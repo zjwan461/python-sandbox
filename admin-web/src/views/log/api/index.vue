@@ -12,7 +12,9 @@
  */
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import {
+  createLlmReview,
   exportApiLogs,
   exportDetectLogs,
   exportSandboxLogs,
@@ -191,6 +193,20 @@ function openDetDetail(row: DetectLogVO) {
   detailKind.value = 'detect'
   detailRow.value = row
   detailVisible.value = true
+}
+
+/** 发起大模型复检（拦截器已自动弹出业务错误，此处仅处理成功提示） */
+async function startLlmReview(row: DetectLogVO) {
+  if (!row.id) {
+    ElMessage.warning('检测记录ID不存在')
+    return
+  }
+  try {
+    await createLlmReview(row.id)
+    ElMessage.success('复检任务已创建，请前往"大模型复检"页面查看')
+  } catch {
+    // 业务错误已由 request 拦截器自动弹出，此处不再重复提示
+  }
 }
 
 /** 处置口径展示映射：ALLOW=放行 BLOCK=拦截 FAIL_OPEN=故障放行 FAIL_CLOSE=故障拒绝 */
@@ -542,9 +558,10 @@ onMounted(async () => {
               <el-link type="primary" @click="openTrace(row.traceId)">{{ row.traceId }}</el-link>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="80" fixed="right">
+          <el-table-column label="操作" width="140" fixed="right">
             <template #default="{ row }">
               <el-button link type="primary" size="small" @click="openDetDetail(row)">详情</el-button>
+              <el-button link type="success" size="small" @click="startLlmReview(row)">发起复检</el-button>
             </template>
           </el-table-column>
           <template #empty><el-empty description="暂无模型检测记录（需开启 codeguard.model.enabled）" /></template>

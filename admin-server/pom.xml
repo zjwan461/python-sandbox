@@ -108,6 +108,13 @@
             <version>${spring-security-crypto.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.openai</groupId>
+            <artifactId>openai-java</artifactId>
+            <version>4.54.0</version>
+            <scope>compile</scope>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

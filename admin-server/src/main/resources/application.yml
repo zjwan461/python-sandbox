@@ -89,6 +89,9 @@ admin:
   # python-sandbox 服务地址（Bridge 对接网关使用，T-0027）
   sandbox:
     base-url: ${SANDBOX_BASE_URL:http://python-sandbox:8080}
+  # 大模型复检 API Key（通过环境变量 LLM_REVIEW_API_KEY 注入，默认空=不启用复检）
+  llm-review:
+    api-key: ${LLM_REVIEW_API_KEY:}
 
 logging:
   level:

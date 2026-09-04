@@ -124,6 +124,86 @@ export async function exportApiLogs(params: ApiLogQuery, format: 'csv' | 'excel'
   ElMessage.success('导出已开始')
 }
 
+// ===================== 大模型复检 =====================
+
+export interface LlmReviewQuery {
+  beginTime?: string
+  endTime?: string
+  detectLogId?: number
+  taskStatus?: string
+  llmLabel?: string
+  humanReviewStatus?: string
+  humanLabel?: string
+  orderBy?: string
+  asc?: boolean
+  pageNum?: number
+  pageSize?: number
+}
+
+export interface LlmReviewVO {
+  id: number
+  detectLogId: number
+  taskStatus: string
+  retryCount: number
+  maxRetry: number
+  codeSnippet?: string
+  smallModelLabel?: string
+  smallModelRawOutput?: string
+  llmProvider?: string
+  llmModel?: string
+  llmLabel?: string
+  llmExplanation?: string
+  llmLatencyMs?: number
+  llmErrorMessage?: string
+  humanReviewStatus?: string
+  humanLabel?: string
+  humanRemark?: string
+  reviewerId?: number
+  reviewerName?: string
+  reviewTime?: string
+  startTime?: string
+  endTime?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export function pageLlmReviews(params: LlmReviewQuery) {
+  return request<PageResult<LlmReviewVO>>({ url: '/logs/llm-review', method: 'get', params })
+}
+
+export function getLlmReview(id: number) {
+  return request<LlmReviewVO>({ url: `/logs/llm-review/${id}`, method: 'get' })
+}
+
+export function createLlmReview(detectLogId: number) {
+  return request<number>({ url: '/logs/llm-review', method: 'post', params: { detectLogId } })
+}
+
+export function humanReviewLlm(id: number, data: { humanReviewStatus: string; humanLabel?: string; humanRemark?: string }) {
+  return request<void>({ url: `/logs/llm-review/${id}/review`, method: 'put', data })
+}
+
+export function cancelLlmReview(id: number) {
+  return request<void>({ url: `/logs/llm-review/${id}/cancel`, method: 'put' })
+}
+
+export function executeLlmReview(id: number) {
+  return request<void>({ url: `/logs/llm-review/${id}/execute`, method: 'post' })
+}
+
+export async function exportLlmReviewsJsonl(params: LlmReviewQuery): Promise<void> {
+  const res = await service.get('/logs/llm-review/export/jsonl', {
+    params,
+    responseType: 'blob'
+  })
+  triggerDownload(
+    res.data as Blob,
+    res.headers['content-disposition'],
+    'llm_review_export.jsonl'
+  )
+  ElMessage.success('导出已开始')
+}
+
 /** 沙箱操作日志导出（FR-LOG-06，口径同上） */
 export async function exportSandboxLogs(params: SandboxLogQuery, format: 'csv' | 'excel'): Promise<void> {
   const res = await service.get('/logs/sandbox/export', {

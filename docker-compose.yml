@@ -42,10 +42,13 @@ services:
       - ./cross-cutting/database/schema/006-sandbox-log-extension.sql:/docker-entrypoint-initdb.d/01-006-sandbox-log-extension.sql:ro
       - ./cross-cutting/database/schema/007-sys-notice.sql:/docker-entrypoint-initdb.d/01-007-sys-notice.sql:ro
       - ./cross-cutting/database/schema/008-codeguard-detect-log.sql:/docker-entrypoint-initdb.d/01-008-codeguard-detect-log.sql:ro
-      # 种子数据（超管 admin/Admin@123、菜单、角色、sys_config；002 为批次6增量权限；003 为 CodeGuard 策略键）
+      - ./cross-cutting/database/schema/009-llm-review-task.sql:/docker-entrypoint-initdb.d/01-009-llm-review-task.sql:ro
+      # 种子数据（超管 admin/Admin@123、菜单、角色、sys_config；002 为批次6增量权限；003 为 CodeGuard 策略键；004 为大模型复检配置；005 为大模型复检菜单）
       - ./cross-cutting/database/seed/001-admin-seed.sql:/docker-entrypoint-initdb.d/02-001-admin-seed.sql:ro
       - ./cross-cutting/database/seed/002-admin-batch6.sql:/docker-entrypoint-initdb.d/02-002-admin-batch6.sql:ro
       - ./cross-cutting/database/seed/003-codeguard.sql:/docker-entrypoint-initdb.d/02-003-codeguard.sql:ro
+      - ./cross-cutting/database/seed/004-llm-check.sql:/docker-entrypoint-initdb.d/02-004-llm-check.sql:ro
+      - ./cross-cutting/database/seed/005-llm-review-menu.sql:/docker-entrypoint-initdb.d/02-005-llm-review-menu.sql:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
@@ -145,6 +148,8 @@ services:
       - SANDBOX_BASE_URL=http://sandbox-api:8080
       # 内部共享凭证，必须与 sandbox-api 侧一致（生产必改）
       - ADMIN_INTERNAL_TOKEN=${ADMIN_INTERNAL_TOKEN:-change-me-admin-internal-token}
+      # 大模型复检 API Key（可选，用于调用大模型进行代码安全复检）
+      - LLM_REVIEW_API_KEY=${LLM_REVIEW_API_KEY:-}
     restart: unless-stopped
     depends_on:
       mysql:

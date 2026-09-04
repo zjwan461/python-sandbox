@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class SysConfigReader {
 
     /** 受控配置键（与 seed/001-admin-seed.sql §6 预置键一一对应） */
+    /** 受控配置键（与 seed/001-admin-seed.sql §6 预置键一一对应） */
     public static final class Keys {
         public static final String REGISTER_ALLOWED = "register.allowed";
         public static final String LOGIN_FAIL_THRESHOLD = "login.fail.threshold";
@@ -41,10 +42,17 @@ public class SysConfigReader {
         public static final String RATELIMIT_DEFAULT_DAY = "ratelimit.default.day";
         public static final String RATELIMIT_ANONYMOUS_ALLOWED = "ratelimit.anonymous.allowed";
 
+        // 大模型复检配置键（seed/004-llm-check.sql）
+        public static final String LLM_REVIEW_ENABLED = "llm.review.enabled";
+        public static final String LLM_REVIEW_PROVIDER = "llm.review.provider";
+        public static final String LLM_REVIEW_API_ENDPOINT = "llm.review.api.endpoint";
+        public static final String LLM_REVIEW_MODEL_NAME = "llm.review.model.name";
+        public static final String LLM_REVIEW_BATCH_SIZE = "llm.review.batch.size";
+        public static final String LLM_REVIEW_CRON = "llm.review.cron";
+
         private Keys() {
         }
     }
-
     /** 键缺失/非法时的明确默认业务值（requirements.md 默认口径） */
     private static final Map<String, String> DEFAULTS = Map.of(
             Keys.REGISTER_ALLOWED, "false",

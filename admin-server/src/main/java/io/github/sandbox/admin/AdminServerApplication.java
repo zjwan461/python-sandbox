@@ -3,6 +3,8 @@ package io.github.sandbox.admin;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * admin-server 启动类（T-0010）。
@@ -14,6 +16,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  */
 @SpringBootApplication
 @MapperScan("io.github.sandbox.admin.**.mapper")
+@EnableAsync
+@EnableScheduling
 public class AdminServerApplication {
 
     public static void main(String[] args) {

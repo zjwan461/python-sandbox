@@ -90,6 +90,61 @@ runPythonCode ──guard─┤        开关: codeguard.static.enabled（默认
 - 推理服务三选一（compose profile）：`detect-cpu`（验证用）/ `detect-cuda` / `detect-vllm`（生产推荐）
 - 策略明细见 [`cross-cutting/database/seed/003-codeguard.sql`](cross-cutting/database/seed/003-codeguard.sql)
 
+## 🔍 大模型结果复检（LLM Review）
+
+对小模型推理结果进行异步复检，使用大模型（DeepSeek/Qwen/OpenAI 等）验证小模型判定的准确性，支持人工复核和结果导出。
+
+### 功能特性
+
+- **异步复检任务**：定时调度（默认每 30 分钟）批量处理待复检的检测记录
+- **大模型验证**：调用大模型 API 判断小模型判定是否正确，并给出解释
+- **人工复核**：管理员可在页面上修改大模型的复检结果，作为最终真相
+- **JSONL 导出**：导出复检结果为 JSONL 格式，用于模型微调训练
+- **任务管理**：支持任务中断、重启、重试（最多 3 次）
+
+### 配置说明
+
+在 `sys_config` 表中配置以下参数（管理端「系统设置」页面可修改）：
+
+| 配置键 | 说明 | 默认值 |
+|--------|------|--------|
+| `llm.review.enabled` | 是否开启大模型复检 | `false` |
+| `llm.review.provider` | 大模型提供商（openai/deepseek/qwen） | `openai` |
+| `llm.review.api.endpoint` | 大模型 API 地址 | 空 |
+| `llm.review.model.name` | 大模型名称 | `gpt-4o-mini` |
+| `llm.review.batch.size` | 单次复检批量大小 | `50` |
+| `llm.review.cron` | 复检调度 Cron 表达式 | `0 0/30 * * * ?` |
+
+**环境变量**：
+- `LLM_REVIEW_API_KEY`：大模型 API Key（必填，不入库）
+
+### 使用流程
+
+1. **启用复检功能**：在管理端「系统设置」中将 `llm.review.enabled` 设为 `true`
+2. **配置大模型**：设置 API endpoint、model name，并通过环境变量注入 API Key
+3. **创建复检任务**：在「大模型复检」页面选择检测记录创建复检任务
+4. **等待异步执行**：系统定时调度执行复检，调用大模型进行验证
+5. **人工复核**：查看大模型复检结果，必要时进行人工修正
+6. **导出训练数据**：导出 JSONL 格式数据，用于小模型微调训练
+
+### 数据表
+
+- `llm_review_task`：复检任务表，存储任务状态、大模型结果、人工复核结果
+- 关联 `codeguard_detect_log`：通过 `detect_log_id` 关联小模型检测记录
+
+### 权限控制
+
+- `llmreview:view`：查看复检任务
+- `llmreview:edit`：创建/取消任务、人工复核
+- `llmreview:export`：导出 JSONL 数据
+
+### 前端页面
+
+管理端「调用记录」→「大模型复检」菜单：
+- 任务列表：筛选、分页、查看详情
+- 人工复核：同意/不同意大模型判定，填写备注
+- JSONL 导出：按筛选条件导出复检结果
+
 ## 🗂️ 项目结构
 
 ```
