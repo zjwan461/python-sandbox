@@ -7,7 +7,7 @@ from transformers import (
     BitsAndBytesConfig,
     TrainingArguments,  # 新增导入
 )
-from peft import LoraConfig, PeftModel
+from peft import LoraConfig, PeftModel, prepare_model_for_kbit_training
 from trl import SFTTrainer, SFTConfig
 from dotenv import load_dotenv
 
@@ -114,6 +114,8 @@ model = AutoModelForCausalLM.from_pretrained(
     dtype=torch.bfloat16,
 )
 model.config.use_cache = False
+# ========== QLoRA必须补充 ==========
+model = prepare_model_for_kbit_training(model)
 
 # -------------------------- 修复部分 --------------------------
 # 通用训练参数放到 TrainingArguments
