@@ -115,7 +115,8 @@ model = AutoModelForCausalLM.from_pretrained(
 )
 model.config.use_cache = False
 # ========== QLoRA必须补充 ==========
-model = prepare_model_for_kbit_training(model)
+# ✅ use_gradient_checkpointing=False，不让它自动打开梯度检查点, 能提速，但是会增加显存占用
+model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=False)
 
 # -------------------------- 修复部分 --------------------------
 # 通用训练参数放到 TrainingArguments
